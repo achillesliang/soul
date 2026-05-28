@@ -1,0 +1,2127 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>灵魂家园 Soul Haven</title>
+  <!-- Pi SDK must load before app scripts -->
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#050312;color:#e8e0ff;font-family:sans-serif}
+    #root{min-height:100vh}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react">
+    const {useState,useEffect,useRef,useCallback}=React;
+// React via CDN
+
+const LANG_LIST=[
+  {code:"zh",label:"中文",flag:"🇨🇳"},{code:"en",label:"English",flag:"🇺🇸"},
+  {code:"es",label:"Español",flag:"🇪🇸"},{code:"pt",label:"Português",flag:"🇧🇷"},
+  {code:"ru",label:"Русский",flag:"🇷🇺"},{code:"ja",label:"日本語",flag:"🇯🇵"},
+  {code:"ko",label:"한국어",flag:"🇰🇷"},{code:"ar",label:"العربية",flag:"🇸🇦"},
+  {code:"fr",label:"Français",flag:"🇫🇷"},{code:"de",label:"Deutsch",flag:"🇩🇪"},
+  {code:"hi",label:"हिन्दी",flag:"🇮🇳"},{code:"id",label:"Bahasa",flag:"🇮🇩"},
+];
+
+// Bilingual T object — zh primary, en fallback for all others via tl()
+const T={
+  appName:{zh:"灵魂家园",en:"Soul Haven"},
+  tagline:{zh:"灵魂不会死",en:"Souls Never Die"},
+  sub:{zh:"肉体终将归于尘土\n但你来过的痕迹\n将永远存在于区块链之上",en:"The body returns to dust\nBut your existence\nLives forever on the blockchain"},
+  cta:{zh:"为我的灵魂寻找家园 →",en:"Find My Soul's Home →"},
+  eternal:{zh:"∞ 永不设死亡日期 ∞",en:"∞ No death date, ever ∞"},
+  navHome:{zh:"我的灵魂",en:"My Soul"},navMap:{zh:"3D星图",en:"3D Map"},
+  navRitual:{zh:"祭奠",en:"Ritual"},navBoard:{zh:"留言板",en:"Messages"},
+  navCapsule:{zh:"时间胶囊",en:"Capsule"},navPlanet:{zh:"灵魂星球",en:"Soul Planet"},
+  navPlot:{zh:"灵魂地块",en:"Soul Plot"},navLegacy:{zh:"灵魂遗产",en:"Legacy"},
+  navVoice:{zh:"灵魂之声",en:"Voice"},
+  soulName:{zh:"灵魂名字",en:"Soul Name"},
+  soulNamePh:{zh:"你希望被永远记住的名字",en:"The name you want remembered forever"},
+  birthDate:{zh:"降临人间",en:"Date of Birth"},
+  daysWalked:{zh:"你已走过",en:"You have walked"},daysSuffix:{zh:"天",en:" days"},
+  chooseTheme:{zh:"选择归宿",en:"Choose Realm"},
+  kindsPrefix:{zh:"（",en:"("},kindsSuffix:{zh:" 种）",en:" realms)"},
+  epitaph:{zh:"灵魂留言",en:"Epitaph"},
+  epitaphPh:{zh:"我来过，我爱过，我活着过……",en:"I was here, I loved, I lived…"},
+  optional:{zh:"（可跳过）",en:"(optional)"},
+  engrave:{zh:"铭刻我的灵魂 ✦",en:"Engrave My Soul ✦"},
+  backBtn:{zh:"← 返回",en:"← Back"},
+  born:{zh:"降临人间",en:"Born"},soulAge:{zh:"灵魂年龄",en:"Soul Age"},
+  yearsOld:{zh:"岁",en:"yrs"},walkedDays:{zh:"走过的日子",en:"Days Walked"},dest:{zh:"归宿",en:"Realm"},
+  mintNftLabel:{zh:"将灵魂铸造为 NFT",en:"Mint Soul as NFT"},mintNftDesc:{zh:"永久上链 · 1π",en:"Permanent on-chain · 1π"},
+  connectPiLabel:{zh:"连接 Pi Network",en:"Connect Pi Network"},
+  connectPiDesc:{zh:"Pi 身份认证 · 支持 Pi 支付",en:"Pi identity + payments"},
+  connectPiBtn:{zh:"连接 Pi ↗",en:"Connect Pi ↗"},
+  onChain:{zh:"永存于区块链",en:"Forever on blockchain"},
+  nftMintedLabel:{zh:"NFT已铸造",en:"NFT Minted"},
+  mintPaying:{zh:"支付中…",en:"Paying…"},mintMinting:{zh:"铸造中…",en:"Minting…"},
+  mintDone:{zh:"已完成 ✓",en:"Done ✓"},mintCost:{zh:"铸造 1π",en:"Mint 1π"},
+  ritualTitle:{zh:"🕯️ 祭奠仪式",en:"🕯️ Ritual"},
+  ritualSub:{zh:"点烛、献花、放灯，让爱跨越时空",en:"Light candles, offer flowers, release lanterns"},
+  ritualTo:{zh:"正在祭奠：",en:"Offering to:"},
+  ritualProgress:{zh:"今日祭奠进度",en:"Today's ritual progress"},
+  ritualComplete:{zh:"六礼已全，愿逝者安息，生者平安 ✦",en:"All rites complete — rest in peace ✦"},
+  ritualDone:{zh:"✓ 已完成",en:"✓ Done"},
+  mapTitle:{zh:"🌌 3D 灵魂星图",en:"🌌 3D Soul Star Map"},
+  mapSub:{zh:"拖拽旋转 · 滚轮缩放 · 点击灵魂",en:"Drag · Zoom · Click a soul"},
+  mapAll:{zh:"全部",en:"All"},mapSoulsUnit:{zh:"个灵魂",en:" souls"},
+  mapBorn:{zh:"生于",en:"Born"},mapMessages:{zh:"条留言",en:" msg"},mapCapsules:{zh:"个胶囊",en:" caps"},
+  boardTitle:{zh:"📜 灵魂留言板",en:"📜 Soul Messages"},
+  boardSub:{zh:"与已故灵魂对话，让爱跨越时空",en:"Speak to souls across time and space"},
+  boardLabel:{zh:"写一条留言给宇宙",en:"Write a message to the cosmos"},
+  boardPh:{zh:"你想对哪个灵魂说些什么……",en:"What would you say…"},
+  boardSend:{zh:"发送 ✦",en:"Send ✦"},boardSending:{zh:"发送中…",en:"Sending…"},
+  capsuleTitle:{zh:"⏳ 时间胶囊",en:"⏳ Time Capsule"},
+  capsuleSub:{zh:"写给未来的信 · 0.5π",en:"Letters to the future · 0.5π"},
+  capsuleNew:{zh:"+ 创建胶囊",en:"+ New Capsule"},capsuleFormTitle:{zh:"新的时间胶囊",en:"New Time Capsule"},
+  capsuleNameLabel:{zh:"标题",en:"Title"},capsuleNamePh:{zh:"给这个胶囊起个名字",en:"Name this capsule"},
+  capsuleDateLabel:{zh:"开启日期",en:"Open Date"},capsuleContentLabel:{zh:"内容",en:"Content"},
+  capsuleContentPh:{zh:"写下你想对未来的自己说的话……",en:"Write to your future self…"},
+  capsuleNote:{zh:"支付 0.5π 将胶囊永久封存到区块链",en:"Pay 0.5π to seal forever on-chain"},
+  capsuleSeal:{zh:"封存胶囊 0.5π ✦",en:"Seal 0.5π ✦"},capsuleSealing:{zh:"支付中…",en:"Processing…"},
+  capsuleLocked:{zh:"解封",en:"Opens"},capsuleOpened:{zh:"✓ 已开启 ·",en:"✓ Opened ·"},capsuleOnChain:{zh:"已上链",en:"On-chain"},
+  nftTitle:{zh:"🔮 NFT 铸造",en:"🔮 NFT Minting"},nftSub:{zh:"将你的灵魂铸造为唯一的区块链资产",en:"Mint your soul as a unique blockchain asset"},
+  nftF1:{zh:"🔒 唯一性",en:"🔒 Unique"},nftD1:{zh:"全球限量，每个灵魂只能铸造一次",en:"Global limit — each soul minted only once"},
+  nftF2:{zh:"⛓️ 永久上链",en:"⛓️ Permanent"},nftD2:{zh:"Pi Network区块链，不可删除",en:"Pi Network — cannot be deleted"},
+  nftF3:{zh:"🌐 可转让",en:"🌐 Transferable"},nftD3:{zh:"可赠予后代或在市场交易",en:"Gift to descendants or trade"},
+  nftF4:{zh:"✨ 灵魂凭证",en:"✨ Soul Cert"},nftD4:{zh:"持有者可访问所有高级功能",en:"Holders access all premium features"},
+  nftMintBtn:{zh:"铸造灵魂 NFT · 1π ✦",en:"Mint Soul NFT · 1π ✦"},nftMintingLabel:{zh:"铸造中…",en:"Minting…"},
+  nftSuccessTitle:{zh:"铸造成功",en:"Minted!"},
+  nftSuccessDesc:{zh:"你的灵魂已永久存在于区块链之上\n无论肉体如何，灵魂永不消逝",en:"Your soul is permanently on the blockchain\nThe body fades — the soul never does"},
+  nftPiWarn:{zh:"⚠️ 请先连接 Pi Network",en:"⚠️ Connect Pi Network first"},
+  // Plot page
+  plotTitle:{zh:"🏛️ 灵魂地块",en:"🏛️ Soul Plots"},
+  plotSub:{zh:"在永恒墓地购置你的专属灵魂地产，区块链永久所有权",en:"Own a piece of the eternal cemetery — blockchain-permanent ownership"},
+  plotSelectZone:{zh:"选择你的区域",en:"Choose Your Zone"},
+  plotZoneDetail:{zh:"区域详情",en:"Zone Details"},
+  plotBuyNow:{zh:"购买此地块",en:"Buy This Plot"},
+  plotOwnedTitle:{zh:"你的灵魂已落定",en:"Your Soul Has a Home"},
+  plotOwnedOnChain:{zh:"已上链 · 永久持有",en:"On-chain · Yours Forever"},
+  plotTransfer:{zh:"转让地块",en:"Transfer Plot"},
+  plotTransferPh:{zh:"输入接收方灵魂名字",en:"Enter recipient soul name"},
+  plotTransferBtn:{zh:"确认转让",en:"Confirm Transfer"},
+  plotTransferring:{zh:"转让中…",en:"Transferring…"},
+  plotStats:{zh:"全球地块统计",en:"Global Plot Stats"},
+  plotTotalOwned:{zh:"已被认领",en:"Claimed"},plotRemaining:{zh:"剩余可购",en:"Available"},
+  plotBuying:{zh:"购买中…",en:"Buying…"},plotBuyBtn:{zh:"π",en:"π"},
+  plotPiWarn:{zh:"⚠️ 请先连接 Pi Network",en:"⚠️ Connect Pi Network"},
+  plotRemain:{zh:"剩余",en:""},plotRemainUnit:{zh:"块",en:" left"},
+  // Legacy
+  legacyTitle:{zh:"🎁 灵魂遗产",en:"🎁 Soul Legacy"},legacySub:{zh:"链上遗嘱，指定π继承人",en:"On-chain will — designate your π heir"},
+  legacyCreate:{zh:"+ 立遗嘱",en:"+ Create Will"},legacyFormTitle:{zh:"创建链上遗嘱",en:"Create On-Chain Will"},
+  legacyHeirLabel:{zh:"继承人灵魂名字",en:"Heir Soul Name"},legacyHeirPh:{zh:"例：林间听风",en:"e.g. Forest Wanderer"},
+  legacyAmountLabel:{zh:"遗产金额 (π)",en:"Amount (π)"},legacyAmountPh:{zh:"例：5",en:"e.g. 5"},
+  legacyCondLabel:{zh:"触发条件",en:"Trigger Condition"},legacyCondPh:{zh:"例：我离世10年后",en:"e.g. 10 years after I'm gone"},
+  legacyWarnText:{zh:"⚠️ 遗产金额 + 0.1π 锁定在合约中，条件满足后自动执行，无法撤回。",en:"⚠️ Amount + 0.1π fee locked in contract. Auto-executes when triggered. Irrevocable."},
+  legacySeal:{zh:"封存遗嘱 ✦",en:"Seal Will ✦"},legacySealing:{zh:"封存中…",en:"Sealing…"},
+  legacyGiveTo:{zh:"赠予",en:"To"},legacyCondPrefix:{zh:"触发条件：",en:"Condition:"},
+  legacyCreatedPrefix:{zh:"创建于",en:"Created"},legacyOnChain:{zh:"已上链",en:"On-chain"},
+  legacyPiWarn:{zh:"⚠️ 请先连接 Pi Network",en:"⚠️ Connect Pi Network first"},
+  legacyH1:{zh:"📝 写下遗嘱",en:"📝 Write Will"},legacyH1d:{zh:"指定π数量和继承人",en:"Set amount and heir ID"},
+  legacyH2:{zh:"🔐 链上封存",en:"🔐 Sealed"},legacyH2d:{zh:"条件未达成前无人可动",en:"Locked until condition met"},
+  legacyH3:{zh:"⏰ 自动执行",en:"⏰ Auto-execute"},legacyH3d:{zh:"条件满足后自动转账",en:"Transfers automatically"},
+  // Voice
+  voiceTitle:{zh:"🎵 灵魂之声",en:"🎵 Soul Voice"},voiceSub:{zh:"录下你的声音，让它永远存在",en:"Record your voice to live forever"},
+  voicePrompt:{zh:"按下按钮，留下你的声音",en:"Press the button to leave your voice"},
+  voiceStart:{zh:"🎙️ 开始录音",en:"🎙️ Start Recording"},voiceStop:{zh:"停止录音",en:"Stop"},
+  voiceRecording:{zh:"● 录音中",en:"● Recording"},voiceRedo:{zh:"重新录制",en:"Re-record"},
+  voiceSeal:{zh:"永久封存 0.5π ✦",en:"Seal Forever 0.5π ✦"},voiceSealing:{zh:"上链中…",en:"Uploading…"},
+  voiceSealedTitle:{zh:"声音已永久封存",en:"Voice Sealed Forever"},voiceSealedDesc:{zh:"已上链 · 永不消逝",en:"On-chain · Will never fade"},
+  voiceOnChain:{zh:"永久存储于 Pi Network IPFS",en:"Permanently stored on Pi Network IPFS"},
+  voiceOthers:{zh:"其他灵魂留下的声音",en:"Voices from other souls"},voicePiWarn:{zh:"⚠️ 请先连接 Pi Network",en:"⚠️ Connect Pi Network first"},
+  // Planet
+  planetTitle:{zh:"🪐 灵魂星球",en:"🪐 Soul Planet"},
+  planetSub:{zh:"每个灵魂在银河系拥有专属星球，Claude AI分配坐标，Pi验证唯一性，区块链永久铭刻",en:"Every soul owns a unique planet in the galaxy. Claude AI assigns coordinates, Pi verifies uniqueness, blockchain-permanent."},
+  planetGenerate:{zh:"🤖 Claude AI 生成我的星球",en:"🤖 Claude AI Generate My Planet"},
+  planetGenerating:{zh:"Claude AI 正在分配你的专属星球坐标……",en:"Claude AI is assigning your unique planet coordinates…"},
+  planetMint:{zh:"铸造星球 NFT · 3π ✦",en:"Mint Planet NFT · 3π ✦"},planetMinting:{zh:"铸造中…",en:"Minting…"},
+  planetMinted:{zh:"星球 NFT 已铸造",en:"Planet NFT Minted"},
+  planetPiWarn:{zh:"⚠️ 需要连接 Pi Network — Pi 验证确保每人只能拥有一颗星球",en:"⚠️ Pi Network required — ensures one planet per person"},
+  planetCoords:{zh:"银河坐标",en:"Galactic Coords"},planetAtmo:{zh:"大气成分",en:"Atmosphere"},
+  planetFeature:{zh:"独特特征",en:"Special Feature"},planetUnique:{zh:"唯一性认证",en:"Uniqueness Verified"},
+};
+const tl=(k,l)=>{
+  if(!T[k])return k;
+  if(l==="zh"&&T[k].zh)return T[k].zh;
+  return T[k].en||T[k].zh||k;
+};
+
+// ─── DATA ─────────────────────────────────────────────────────
+const RITUALS=[
+  {id:"candle",emoji:"🕯️",color:"#fbbf24",zh:"点一根蜡烛",en:"Light a Candle",
+   msg:{zh:"烛光已点亮，愿它照耀你所在的地方",en:"Candle lit — may it light your eternal home"}},
+  {id:"flower",emoji:"🌸",color:"#ff8fab",zh:"献一束鲜花",en:"Offer Flowers",
+   msg:{zh:"花瓣随风飘散，带去无尽的思念",en:"Petals carried by the wind to wherever you are"}},
+  {id:"lantern",emoji:"🏮",color:"#f97316",zh:"放一盏天灯",en:"Release Lantern",
+   msg:{zh:"天灯升起，载着祝福飞向你",en:"Lantern rising, carrying blessings to you"}},
+  {id:"wine",emoji:"🍶",color:"#a78bfa",zh:"敬一杯酒",en:"Pour a Toast",
+   msg:{zh:"这杯酒，敬你走过的每一天",en:"This toast is for every day you lived"}},
+  {id:"incense",emoji:"🌿",color:"#4ade80",zh:"燃一炷香",en:"Burn Incense",
+   msg:{zh:"香烟袅袅，愿你安息",en:"Incense rising — rest in peace"}},
+  {id:"music",emoji:"🎶",color:"#38bdf8",zh:"奏一曲乐",en:"Play a Melody",
+   msg:{zh:"旋律在宇宙中回荡，为你而奏",en:"Melody echoing in the cosmos, for you"}},
+];
+
+const GODS=[
+  // ── 佛道 ──
+  {id:"guanyin",  emoji:"🪷", name:{zh:"观世音菩萨",en:"Guanyin Bodhisattva"},
+   color:"#f0e6ff", glow:"rgba(192,132,252,0.5)", origin:{zh:"佛教",en:"Buddhism"},
+   domain:{zh:"慈悲·救苦·平安",en:"Compassion · Mercy · Peace"},
+   blessing:{zh:"愿菩萨慈悲护佑，消灾解难，平安顺遂",en:"May Guanyin's compassion protect you, dispel misfortune, bring peace"},
+   prayer:{zh:"南无观世音菩萨，保佑 {name} 平安顺遂，慈悲护佑",en:"Namo Guanyin Bodhisattva, bless {name} with peace and compassion"},
+   incensePrice:.5, offeringEmoji:"🪷"},
+  {id:"buddha",   emoji:"☸️", name:{zh:"释迦牟尼佛",en:"Shakyamuni Buddha"},
+   color:"#fef3c7", glow:"rgba(251,191,36,0.5)", origin:{zh:"佛教",en:"Buddhism"},
+   domain:{zh:"觉悟·智慧·解脱",en:"Enlightenment · Wisdom · Liberation"},
+   blessing:{zh:"愿佛光普照，智慧开启，早证菩提",en:"May Buddha's light illuminate all, wisdom bloom, liberation come"},
+   prayer:{zh:"南无本师释迦牟尼佛，愿 {name} 智慧圆满，早登彼岸",en:"Namo Shakyamuni Buddha, may {name} attain wisdom and liberation"},
+   incensePrice:.5, offeringEmoji:"☸️"},
+  {id:"dizang",   emoji:"⚫", name:{zh:"地藏王菩萨",en:"Ksitigarbha Bodhisattva"},
+   color:"#e2e8f0", glow:"rgba(100,116,139,0.5)", origin:{zh:"佛教",en:"Buddhism"},
+   domain:{zh:"度亡·超生·冥界守护",en:"Guide souls · Protect the departed · Guardian of the underworld"},
+   blessing:{zh:"愿地藏菩萨接引亡灵，超度苦难，往生极乐",en:"May Ksitigarbha guide the departed souls to bliss"},
+   prayer:{zh:"南无地藏王菩萨，愿 {name} 的灵魂得以超脱，安享极乐",en:"Namo Ksitigarbha, may {name}'s soul transcend and rest in bliss"},
+   incensePrice:.5, offeringEmoji:"🕯️"},
+  {id:"taishang",  emoji:"☯️", name:{zh:"太上老君",en:"Laozi / Taishang Laojun"},
+   color:"#dcfce7", glow:"rgba(74,222,128,0.5)", origin:{zh:"道教",en:"Taoism"},
+   domain:{zh:"道法自然·长生·炼丹",en:"Tao · Longevity · Alchemy"},
+   blessing:{zh:"愿道法护佑，顺应自然，无为而治，长生久视",en:"May the Tao guide you, flow with nature, live long and prosper"},
+   prayer:{zh:"太上老君，愿 {name} 得道自然，心平气和，福寿绵长",en:"Taishang Laojun, may {name} follow the Tao with peace and longevity"},
+   incensePrice:.5, offeringEmoji:"☯️"},
+  {id:"yuhuang",   emoji:"👑", name:{zh:"玉皇大帝",en:"Jade Emperor"},
+   color:"#fef9c3", glow:"rgba(234,179,8,0.5)", origin:{zh:"道教",en:"Taoism"},
+   domain:{zh:"天庭之主·掌管万神·赐福降祥",en:"Supreme ruler of heaven · Lord of all gods · Bestower of blessings"},
+   blessing:{zh:"愿玉帝赐福，天庭护佑，万事如意，心想事成",en:"May the Jade Emperor bless you with fortune and grant your wishes"},
+   prayer:{zh:"昊天金阙玉皇大天帝，愿 {name} 万事如意，心想事成",en:"Jade Emperor, may {name} be blessed with good fortune and fulfilled wishes"},
+   incensePrice:1, offeringEmoji:"👑"},
+  {id:"mazu",      emoji:"🌊", name:{zh:"妈祖",en:"Mazu / Sea Goddess"},
+   color:"#e0f2fe", glow:"rgba(56,189,248,0.5)", origin:{zh:"道教/民间",en:"Taoism / Folk"},
+   domain:{zh:"海上守护·渔民庇佑·慈母之爱",en:"Sea guardian · Protector of sailors · Maternal love"},
+   blessing:{zh:"愿妈祖娘娘保佑出行平安，一帆风顺",en:"May Mazu bless your journey with calm seas and safe passage"},
+   prayer:{zh:"天上圣母妈祖娘娘，愿 {name} 出行平安，一帆风顺，阖家幸福",en:"Mazu, Queen of Heaven, may {name} travel safely with family in happiness"},
+   incensePrice:.5, offeringEmoji:"🌊"},
+  {id:"caishen",   emoji:"💰", name:{zh:"财神爷",en:"God of Wealth"},
+   color:"#fef08a", glow:"rgba(250,204,21,0.5)", origin:{zh:"道教/民间",en:"Taoism / Folk"},
+   domain:{zh:"财运·生意兴隆·招财进宝",en:"Wealth · Prosperity · Fortune"},
+   blessing:{zh:"愿财神保佑，财源滚滚，招财进宝，生意兴隆",en:"May the God of Wealth bless you with fortune and prosperity"},
+   prayer:{zh:"财神爷，愿 {name} 财源广进，生意兴隆，招财进宝",en:"God of Wealth, may {name} prosper with abundant fortune and success"},
+   incensePrice:1, offeringEmoji:"💰"},
+  {id:"guan",      emoji:"🗡️", name:{zh:"关帝圣君",en:"Guan Yu / God of War & Loyalty"},
+   color:"#fee2e2", glow:"rgba(239,68,68,0.5)", origin:{zh:"道教/民间",en:"Taoism / Folk"},
+   domain:{zh:"忠义·武运·保护商人",en:"Loyalty · Martial prowess · Protector of merchants"},
+   blessing:{zh:"愿关帝保佑，义气长存，事业顺遂，逢凶化吉",en:"May Guan Yu bless you with loyalty, protect your ventures, ward off evil"},
+   prayer:{zh:"伏魔大帝关圣帝君，愿 {name} 忠义护身，事业顺遂，逢凶化吉",en:"Guan Yu, Guardian Emperor, protect {name} with loyalty and ward off all evil"},
+   incensePrice:1, offeringEmoji:"🗡️"},
+  // ── 印度教 ──
+  {id:"ganesha",   emoji:"🐘", name:{zh:"象神伽内什",en:"Ganesha"},
+   color:"#fce7f3", glow:"rgba(249,168,212,0.5)", origin:{zh:"印度教",en:"Hinduism"},
+   domain:{zh:"智慧·消除障碍·新的开始",en:"Wisdom · Remove obstacles · New beginnings"},
+   blessing:{zh:"愿象神除去前路障碍，带来智慧与好运",en:"May Ganesha remove all obstacles on your path and bring wisdom"},
+   prayer:{zh:"Om Ganesha，愿 {name} 前路无碍，智慧大开，万事顺遂",en:"Om Ganesha, may {name}'s path be clear, wisdom flow, all things prosper"},
+   incensePrice:.5, offeringEmoji:"🐘"},
+  {id:"shiva",     emoji:"🌙", name:{zh:"湿婆神",en:"Shiva"},
+   color:"#ede9fe", glow:"rgba(139,92,246,0.5)", origin:{zh:"印度教",en:"Hinduism"},
+   domain:{zh:"毁灭与重生·冥想·宇宙舞者",en:"Destruction & rebirth · Meditation · Cosmic dancer"},
+   blessing:{zh:"愿湿婆神的能量净化一切，带来涅槃重生",en:"May Shiva's energy purify all and bring transformation and rebirth"},
+   prayer:{zh:"Om Namah Shivaya，愿 {name} 得到净化与重生，灵魂升华",en:"Om Namah Shivaya, may {name} be purified and reborn with elevated soul"},
+   incensePrice:.5, offeringEmoji:"🌙"},
+  // ── 基督/天主教 ──
+  {id:"mary",      emoji:"✝️", name:{zh:"圣母玛利亚",en:"Virgin Mary"},
+   color:"#dbeafe", glow:"rgba(59,130,246,0.5)", origin:{zh:"基督教/天主教",en:"Christianity / Catholicism"},
+   domain:{zh:"慈爱·守护·代祷",en:"Love · Protection · Intercession"},
+   blessing:{zh:"愿圣母的慈爱守护你，代你祈祷，平安喜乐",en:"May Mary's love protect you, intercede for you, bring peace and joy"},
+   prayer:{zh:"万福玛利亚，愿 {name} 蒙受圣宠，平安喜乐，得蒙护佑",en:"Hail Mary, may {name} be filled with grace, peace and divine protection"},
+   incensePrice:.5, offeringEmoji:"✝️"},
+  // ── 伊斯兰/普世 ──
+  {id:"allah",     emoji:"☪️", name:{zh:"真主安拉",en:"Allah (Al-Rahman)"},
+   color:"#d1fae5", glow:"rgba(16,185,129,0.5)", origin:{zh:"伊斯兰教",en:"Islam"},
+   domain:{zh:"慈悲·引导·庇护",en:"Mercy · Guidance · Protection"},
+   blessing:{zh:"奉至仁至慈的真主之名，愿安拉赐福与庇护",en:"In the name of Allah the Most Merciful, may His blessings and protection be upon you"},
+   prayer:{zh:"بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ，愿真主赐 {name} 慈悲庇护，平安吉祥",en:"Bismillah ir-Rahman ir-Rahim — May Allah bless {name} with mercy and peace"},
+   incensePrice:.5, offeringEmoji:"☪️"},
+  // ── 北欧/希腊神话 ──
+  {id:"zeus",      emoji:"⚡", name:{zh:"宙斯/奥丁",en:"Zeus / Odin"},
+   color:"#fef3c7", glow:"rgba(250,204,21,0.5)", origin:{zh:"希腊/北欧神话",en:"Greek / Norse Mythology"},
+   domain:{zh:"天空·权威·雷霆",en:"Sky · Authority · Thunder"},
+   blessing:{zh:"愿诸神之父赐予力量与智慧，保护你不受黑暗侵扰",en:"May the Father of Gods grant strength and wisdom, shield you from darkness"},
+   prayer:{zh:"万神之父，愿 {name} 得力量与智慧，在生命的征途上披荆斩棘",en:"Father of Gods, may {name} have strength and wisdom to overcome all challenges"},
+   incensePrice:.5, offeringEmoji:"⚡"},
+];
+
+const PLOT_ZONES=[
+  // ── 神话级（极稀有，全球限量） ──
+  {id:"genesis",color:"#fff7ae",price:100,total:9,sold:3,rarity:"Genesis",
+   zh:"创世源点",en:"Genesis Origin",
+   desc:{zh:"宇宙诞生之初的能量汇聚点，全球仅9席，永恒见证者",en:"The primordial energy nexus at the dawn of creation. Only 9 exist worldwide."},
+   perks:{zh:["创世发光光环","全星图唯一闪烁","共同创始人身份","每年10π分红","专属创世NFT","永久治理投票权"],en:["Genesis halo effect","Unique flashing on all maps","Co-founder status","10π annual dividend","Exclusive genesis NFT","Permanent governance vote"]}},
+  {id:"center",color:"#fbbf24",price:20,total:99,sold:41,rarity:"Legendary",
+   zh:"永恒之心",en:"Heart of Eternity",
+   desc:{zh:"星图正中央，最神圣之地，亿万灵魂仰望之所",en:"The sacred center of the star map — witnessed by billions of souls."},
+   perks:{zh:["永久金色发光","星图中心C位","传说创始徽章","每季5π空投","优先参与新功能"],en:["Permanent gold glow","Center position on star map","Legendary founder badge","5π quarterly airdrop","Priority new features"]}},
+  // ── 史诗级 ──
+  {id:"nebula",color:"#e879f9",price:10,total:999,sold:312,rarity:"Epic",
+   zh:"星云殿堂",en:"Nebula Palace",
+   desc:{zh:"七彩星云之间，灵魂在绚烂光芒中安息",en:"Rest among the iridescent nebulae, bathed in cosmic radiance."},
+   perks:{zh:["彩色星云粒子效果","星图第二圈","史诗紫色徽章","每月1π空投","参与社区治理"],en:["Rainbow nebula particles","Second ring on map","Epic purple badge","1π monthly airdrop","Community governance"]}},
+  {id:"star",color:"#a78bfa",price:8,total:1999,sold:876,rarity:"Epic",
+   zh:"星河大道",en:"Milky Way Ave",
+   desc:{zh:"沿银河排列，无数星辰相伴，光芒万丈永不熄灭",en:"Lined along the Milky Way, flanked by countless stars forever."},
+   perks:{zh:["星河光轨拖尾","星图银河带位置","史诗徽章","双月Pi奖励","灵魂星球折扣"],en:["Milky Way trail effect","Galaxy band position","Epic badge","Bi-monthly Pi reward","Soul Planet discount"]}},
+  // ── 稀有级 ──
+  {id:"aurora",color:"#34d399",price:5,total:9999,sold:3241,rarity:"Rare",
+   zh:"极光谷地",en:"Aurora Valley",
+   desc:{zh:"极光常年舞动的幽静谷地，绿光萦绕，灵气十足",en:"A tranquil valley where auroras dance eternally in emerald light."},
+   perks:{zh:["极光波动效果","星图极光区","稀有绿色徽章","季度Pi奖励","时间胶囊折扣"],en:["Aurora wave effect","Aurora zone on map","Rare green badge","Quarterly Pi reward","Capsule discount"]}},
+  {id:"garden",color:"#4ade80",price:3,total:19999,sold:8102,rarity:"Rare",
+   zh:"极乐花园",en:"Elysian Garden",
+   desc:{zh:"永恒花海环绕，四季常开，是最受家庭灵魂欢迎的区域",en:"Eternal blooms surround this beloved zone — perfect for family souls."},
+   perks:{zh:["花海粒子特效","星图花园区","稀有徽章","季度红包","留言板置顶"],en:["Flower particle effect","Garden zone on map","Rare badge","Quarterly bonus","Message board pin"]}},
+  // ── 普通级（面向大众，数百万容量） ──
+  {id:"ocean",color:"#38bdf8",price:1,total:4999999,sold:412830,rarity:"Common",
+   zh:"星海平原",en:"Star Ocean Plains",
+   desc:{zh:"浩瀚星海之中，每颗灵魂都是独一无二的存在，无边无际",en:"In the vast star ocean, every soul shines uniquely — infinite space for all."},
+   perks:{zh:["基础蓝色光点","星图外圈位置","普通徽章","加入灵魂社区","免费祭奠次数+3"],en:["Basic blue glow","Outer ring position","Common badge","Join soul community","+3 free ritual chances"]}},
+  {id:"void",color:"#6b7280",price:0.5,total:9999999,sold:1823400,rarity:"Free",
+   zh:"虚空边界",en:"Void Frontier",
+   desc:{zh:"每位灵魂的起点，免费加入，在虚空中等待被发现",en:"The starting point for every soul — free to join, waiting to be found in the void."},
+   perks:{zh:["灰色光点","星图边缘位置","免费徽章","可升级至高级区域","基础社区功能"],en:["Grey glow","Edge position on map","Free badge","Upgradeable to premium zone","Basic community features"]}},
+];
+
+const THEME_CONFIG={
+  cosmos:{emoji:"🌌",zh:"星海",en:"Cosmos",color:"#7c6fff",glow:"rgba(124,111,255,0.4)"},
+  forest:{emoji:"🌿",zh:"古林",en:"Forest",color:"#4ade80",glow:"rgba(74,222,128,0.4)"},
+  ocean:{emoji:"🌊",zh:"深海",en:"Deep Sea",color:"#38bdf8",glow:"rgba(56,189,248,0.4)"},
+  mountain:{emoji:"⛰️",zh:"云巅",en:"Summit",color:"#fb923c",glow:"rgba(251,146,60,0.4)"},
+  city:{emoji:"✨",zh:"光城",en:"Light City",color:"#f9a8d4",glow:"rgba(249,168,212,0.4)"},
+  sakura:{emoji:"🌸",zh:"樱境",en:"Sakura",color:"#ff8fab",glow:"rgba(255,143,171,0.4)"},
+  volcano:{emoji:"🌋",zh:"熔核",en:"Magma Core",color:"#ff4500",glow:"rgba(255,69,0,0.4)"},
+  glacier:{emoji:"🧊",zh:"冰川",en:"Glacier",color:"#a5f3fc",glow:"rgba(165,243,252,0.4)"},
+  desert:{emoji:"🏜️",zh:"沙漠",en:"Desert",color:"#fbbf24",glow:"rgba(251,191,36,0.4)"},
+  aurora:{emoji:"🌅",zh:"极光",en:"Aurora",color:"#34d399",glow:"rgba(52,211,153,0.4)"},
+  temple:{emoji:"🏯",zh:"古刹",en:"Temple",color:"#c084fc",glow:"rgba(192,132,252,0.4)"},
+  lightning:{emoji:"⚡",zh:"雷域",en:"Thunder",color:"#facc15",glow:"rgba(250,204,21,0.4)"},
+  void:{emoji:"🕳️",zh:"虚空",en:"The Void",color:"#6b7280",glow:"rgba(107,114,128,0.4)"},
+  rainbow:{emoji:"🌈",zh:"彩虹桥",en:"Rainbow",color:"#f472b6",glow:"rgba(244,114,182,0.4)"},
+  lantern:{emoji:"🏮",zh:"灯海",en:"Lantern Sea",color:"#f97316",glow:"rgba(249,115,22,0.4)"},
+};
+
+const MOCK_SOULS=[
+  {id:"001",name:"苍海一粟",birth:"1985-03-12",theme:"cosmos",epitaph:"我曾仰望星空，如今我成为星空",x:22,y:30,messages:3,capsules:1,nft:true,plot:"center"},
+  {id:"002",name:"林间听风",birth:"1990-07-24",theme:"forest",epitaph:"风过林梢，皆是我的呼吸",x:45,y:55,messages:7,capsules:2,nft:true,plot:"star"},
+  {id:"003",name:"无名之人",birth:"1978-11-01",theme:"ocean",epitaph:"深海的寂静，才是真正的自由",x:68,y:25,messages:1,capsules:0,nft:false,plot:"plain"},
+  {id:"004",name:"云上行者",birth:"2000-01-01",theme:"mountain",epitaph:"脚踏云端，心无挂碍",x:35,y:72,messages:12,capsules:3,nft:true,plot:"garden"},
+  {id:"005",name:"城市之光",birth:"1995-05-20",theme:"city",epitaph:"每盏灯背后，都有一个故事",x:80,y:60,messages:5,capsules:1,nft:false,plot:"plain"},
+  {id:"006",name:"时光旅者",birth:"1988-09-15",theme:"cosmos",epitaph:"时间只是幻觉，爱才是永恒",x:58,y:42,messages:9,capsules:4,nft:true,plot:"star"},
+  {id:"007",name:"樱花落尘",birth:"1993-04-01",theme:"sakura",epitaph:"年年飘落，岁岁重开",x:15,y:60,messages:4,capsules:1,nft:true,plot:"garden"},
+  {id:"008",name:"熔岩之魂",birth:"1970-08-12",theme:"volcano",epitaph:"我的热情永不冷却",x:75,y:80,messages:2,capsules:0,nft:false,plot:"plain"},
+  {id:"009",name:"冰封记忆",birth:"1982-01-20",theme:"glacier",epitaph:"静止不是消亡，是另一种永恒",x:90,y:15,messages:6,capsules:2,nft:true,plot:"star"},
+  {id:"010",name:"极光舞者",birth:"1997-12-03",theme:"aurora",epitaph:"用生命在天空中书写色彩",x:50,y:18,messages:11,capsules:3,nft:true,plot:"center"},
+  {id:"011",name:"古刹钟声",birth:"1965-06-15",theme:"temple",epitaph:"每声钟响都是我的问候",x:28,y:85,messages:8,capsules:1,nft:false,plot:"plain"},
+  {id:"012",name:"彩虹彼端",birth:"2003-07-07",theme:"rainbow",epitaph:"风雨之后，我就是那道光",x:62,y:68,messages:15,capsules:5,nft:true,plot:"garden"},
+];
+const MOCK_MESSAGES=[
+  {from:"林间听风",text:"你的文字让我想起了外婆，谢谢你存在过",time:"2天前",avatar:"🌿"},
+  {from:"城市之光",text:"今夜看星星，想到了你说的话",time:"5天前",avatar:"✨"},
+  {from:"时光旅者",text:"愿你的灵魂在星海中自由翱翔",time:"1周前",avatar:"🌌"},
+];
+const SAMPLE_VOICES=[
+  {id:1,name:"苍海一粟",theme:"cosmos",dur:"0:42",date:"2024-03-12",zh:"最后想说的话",en:"Final words"},
+  {id:2,name:"林间听风",theme:"forest",dur:"1:23",date:"2024-07-24",zh:"给孩子们的歌",en:"A song for my kids"},
+  {id:3,name:"极光舞者",theme:"aurora",dur:"0:18",date:"2024-12-03",zh:"一段笑声",en:"A laugh"},
+];
+
+const PLANET_TYPES=[
+  {type:"Crystal Nebula",zh:"水晶星云",color:"#a5f3fc",emoji:"🔷",ring:true},
+  {type:"Lava Core",zh:"熔岩核心",color:"#ff4500",emoji:"🌋",ring:false},
+  {type:"Ocean World",zh:"海洋星球",color:"#38bdf8",emoji:"🌊",ring:false},
+  {type:"Aurora Realm",zh:"极光领域",color:"#34d399",emoji:"🌅",ring:true},
+  {type:"Dark Matter",zh:"暗物质星",color:"#818cf8",emoji:"⚫",ring:false},
+  {type:"Golden Gaian",zh:"黄金盖亚",color:"#fbbf24",emoji:"🌟",ring:true},
+  {type:"Void Lotus",zh:"虚空莲华",color:"#c084fc",emoji:"🌸",ring:false},
+  {type:"Storm Giant",zh:"风暴巨人",color:"#fb923c",emoji:"⚡",ring:true},
+];
+const ATMO=["Crystalline Silicate","Ionized Helium-3","Methane & Starlight","Quantum Foam","Dark Energy Plasma","Bioluminescent Spores","Temporal Mist","Compressed Starfire"];
+const FEATURES=["Ancient crystal formations spanning entire continents","Reverse-flowing aurora rivers in the stratosphere","Twin moons casting eternal twilight","Oceans of liquid stardust that glow at night","Time-locked valleys where echoes of the past remain visible","Bioluminescent forests visible from orbit","Floating mountain ranges above cloud layers","Underground civilization ruins over 1 million years old","Eternal storm eye containing a miniature nebula","Resonance crystals that sing at stellar frequencies"];
+
+function seedPlanet(name,birth){
+  const s=((name||"soul")+(birth||"")).split("").reduce((a,c)=>(a*31+c.charCodeAt(0))|0,0);
+  const r=n=>Math.abs(((s*1664525+n*6364136+1013904223)&0x7fffffff)/0x7fffffff);
+  const pt=PLANET_TYPES[Math.floor(r(1)*PLANET_TYPES.length)];
+  return{pType:pt,atmo:ATMO[Math.floor(r(2)*ATMO.length)],feature:FEATURES[Math.floor(r(13)*FEATURES.length)],
+    ra:`${String(Math.floor(r(3)*24)).padStart(2,"0")}h ${String(Math.floor(r(4)*60)).padStart(2,"0")}m ${(r(5)*60).toFixed(1)}s`,
+    dec:`${r(6)>.5?"+":"-"}${Math.floor(r(7)*90)}° ${Math.floor(r(8)*60)}'`,
+    dist:`${(r(9)*99+1).toFixed(2)} kly`,radius:`${(r(10)*15+.5).toFixed(2)} R⊕`,
+    mass:`${(r(11)*50+.1).toFixed(2)} M⊕`,period:`${Math.floor(r(12)*1000+10)} Earth days`,
+    planetId:"SOL-"+Math.abs(s%999999999).toString(16).toUpperCase().padStart(9,"0")};
+}
+
+const calcDays=b=>Math.floor((new Date()-new Date(b))/86400000);
+const soulId=n=>"#"+String(Math.abs((n||"soul").split("").reduce((a,c)=>a+c.charCodeAt(0),0)*137%999999)).padStart(6,"0");
+const glowA=(g,a)=>g.replace("0.4",a);
+
+const S={
+  card:{background:"rgba(12,8,35,0.92)",border:"1px solid rgba(150,130,255,0.2)",borderRadius:20,backdropFilter:"blur(12px)"},
+  input:{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(150,130,255,0.25)",borderRadius:12,padding:"13px 16px",color:"#e8e0ff",fontSize:15,fontFamily:"'Noto Serif SC',serif",outline:"none",boxSizing:"border-box",transition:"border-color 0.2s"},
+  btn:{background:"linear-gradient(135deg,#5b3fff,#9b59ff)",border:"none",borderRadius:12,padding:"13px 28px",color:"#fff",fontSize:14,fontFamily:"'Noto Serif SC',serif",cursor:"pointer",letterSpacing:1,boxShadow:"0 6px 24px rgba(91,63,255,0.35)",transition:"all 0.2s",whiteSpace:"nowrap"},
+  ghost:{background:"rgba(100,80,200,0.15)",border:"1px solid rgba(150,130,255,0.3)",borderRadius:12,padding:"12px 24px",color:"#c8b8ff",fontSize:14,cursor:"pointer",transition:"all 0.2s",whiteSpace:"nowrap",fontFamily:"'Noto Serif SC',serif"},
+  label:{fontSize:11,color:"rgba(180,160,255,0.5)",letterSpacing:2,display:"block",marginBottom:8},
+  section:{position:"relative",zIndex:2,maxWidth:900,margin:"0 auto",padding:"24px 20px"},
+  warn:{fontSize:12,color:"rgba(180,160,255,0.4)",textAlign:"center",marginTop:10},
+};
+
+
+// ─── 背景音乐播放器 ───────────────────────────────────────────
+// ─── 背景音乐曲目（多备用源，自动降级）────────────────────────
+const BG_TRACKS = [
+  {name:"星海冥想",  style:"ambient",
+   sources:[
+     "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+     "https://assets.mixkit.co/music/preview/mixkit-dreaming-big-31.mp3",
+   ]},
+  {name:"宇宙低鸣",  style:"ambient",
+   sources:[
+     "https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3",
+     "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+   ]},
+  {name:"灵魂安息",  style:"meditation",
+   sources:[
+     "https://assets.mixkit.co/music/preview/mixkit-relaxing-in-nature-522.mp3",
+     "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+   ]},
+  {name:"天界梵音",  style:"meditation",
+   sources:[
+     "https://assets.mixkit.co/music/preview/mixkit-meditation-972.mp3",
+     "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+   ]},
+  {name:"极光之境",  style:"ambient",
+   sources:[
+     "https://assets.mixkit.co/music/preview/mixkit-deep-urban-623.mp3",
+     "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+   ]},
+  {name:"古寺晨钟",  style:"zen",
+   sources:[
+     "https://assets.mixkit.co/music/preview/mixkit-valley-sunset-127.mp3",
+     "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3",
+   ]},
+  {name:"星尘漂流",  style:"ambient",
+   sources:[
+     "https://assets.mixkit.co/music/preview/mixkit-spirit-of-the-woods-138.mp3",
+     "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3",
+   ]},
+  {name:"净土低语",  style:"zen",
+   sources:[
+     "https://assets.mixkit.co/music/preview/mixkit-comforting-moment-6.mp3",
+     "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+   ]},
+];
+
+function MusicPlayer({lang}){
+  const [playing,  setPlaying]  = useState(false);
+  const [volume,   setVolume]   = useState(0.3);
+  const [trackIdx, setTrackIdx] = useState(0);
+  const [shuffle,  setShuffle]  = useState(true);   // 默认随机
+  const [showCtrl, setShowCtrl] = useState(false);
+  const [started,  setStarted]  = useState(false);
+  const [loading,  setLoading]  = useState(false);
+  const audioRef   = useRef(null);
+  const historyRef = useRef([]);   // 随机历史，避免重复
+
+  // 尝试多备用源，返回第一个能播放的 src
+  const tryLoadAudio = useCallback(async (audio, sources) => {
+    for (const src of sources) {
+      audio.src = src;
+      audio.load();
+      try {
+        await new Promise((resolve, reject) => {
+          const onOk  = () => { audio.removeEventListener("canplay",  onOk);  audio.removeEventListener("error", onErr); resolve(); };
+          const onErr = () => { audio.removeEventListener("canplay",  onOk);  audio.removeEventListener("error", onErr); reject(); };
+          audio.addEventListener("canplay", onOk);
+          audio.addEventListener("error",   onErr);
+          // 5s 超时
+          setTimeout(() => { audio.removeEventListener("canplay", onOk); audio.removeEventListener("error", onErr); reject(); }, 5000);
+        });
+        return true; // 这个源可用
+      } catch {
+        console.warn("[Music] Source failed, trying next:", src);
+      }
+    }
+    return false; // 所有源都失败
+  }, []);
+
+  // 随机选下一首（排除当前，避免连续重复）
+  const randomNext = (cur) => {
+    const others = BG_TRACKS.map((_,i)=>i).filter(i=>i!==cur);
+    return others[Math.floor(Math.random()*others.length)];
+  };
+
+  // 初始化 audio
+  useEffect(()=>{
+    const audio = new Audio();
+    audio.volume = 0.3;
+    audio.preload = "none";
+    // 当前曲目播完自动切下一首
+    audio.addEventListener("ended", ()=>{
+      setTrackIdx(cur=>{
+        const next = shuffle ? randomNext(cur) : (cur+1)%BG_TRACKS.length;
+        historyRef.current.push(next);
+        return next;
+      });
+    });
+    audioRef.current = audio;
+    return()=>{ audio.pause(); audio.src=""; };
+  },[]);
+
+  // 切换曲目（有起点才切）— 自动尝试备用源
+  useEffect(()=>{
+    const audio = audioRef.current;
+    if(!audio||!started) return;
+    const wasPlaying = !audio.paused;
+    setLoading(true);
+    tryLoadAudio(audio, BG_TRACKS[trackIdx].sources).then(ok=>{
+      if(!ok){ setLoading(false); return; }
+      if(wasPlaying){
+        audio.play()
+          .then(()=>{ setPlaying(true); setLoading(false); })
+          .catch(()=>setLoading(false));
+      } else {
+        setLoading(false);
+      }
+    });
+  },[trackIdx, tryLoadAudio]);
+
+  // 音量
+  useEffect(()=>{
+    if(audioRef.current) audioRef.current.volume = volume;
+  },[volume]);
+
+  const toggle = ()=>{
+    const audio = audioRef.current;
+    if(!audio) return;
+    if(!started){
+      // 第一次播放：随机或顺序起点
+      const startIdx = shuffle ? Math.floor(Math.random()*BG_TRACKS.length) : 0;
+      setTrackIdx(startIdx);
+      setStarted(true);
+      setLoading(true);
+      tryLoadAudio(audio, BG_TRACKS[startIdx].sources).then(ok=>{
+        if(!ok){ setLoading(false); return; }
+        audio.play()
+          .then(()=>{ setPlaying(true); setLoading(false); })
+          .catch(()=>setLoading(false));
+      });
+      return;
+    }
+    if(audio.paused){
+      audio.play().then(()=>setPlaying(true)).catch(()=>{});
+    } else {
+      audio.pause(); setPlaying(false);
+    }
+  };
+
+  const goNext = ()=>{
+    const next = shuffle ? randomNext(trackIdx) : (trackIdx+1)%BG_TRACKS.length;
+    historyRef.current.push(trackIdx);
+    setTrackIdx(next);
+  };
+  const goPrev = ()=>{
+    if(historyRef.current.length>0){
+      const prev = historyRef.current.pop();
+      setTrackIdx(prev);
+    } else {
+      setTrackIdx(i=>(i-1+BG_TRACKS.length)%BG_TRACKS.length);
+    }
+  };
+
+  const track = BG_TRACKS[trackIdx];
+  const styleEmoji = {ambient:"🌌",meditation:"🪷",zen:"☯️"}[track.style]||"🎵";
+
+  return(
+    <div style={{position:"fixed",bottom:20,right:16,zIndex:200}}>
+      {/* 控制面板 */}
+      {showCtrl&&(
+        <div style={{background:"rgba(12,8,35,0.96)",border:"1px solid rgba(150,130,255,0.25)",
+            borderRadius:18,padding:"16px 18px",marginBottom:10,
+            backdropFilter:"blur(20px)",boxShadow:"0 8px 36px rgba(0,0,0,0.6)",
+            minWidth:220,animation:"fadeUp 0.2s ease"}}>
+
+          {/* 当前曲目 */}
+          <div style={{textAlign:"center",marginBottom:14}}>
+            <div style={{fontSize:22,marginBottom:4}}>{styleEmoji}</div>
+            <div style={{fontSize:13,color:"#e8e0ff",marginBottom:2}}>{track.name}</div>
+            <div style={{fontSize:10,color:"rgba(180,160,255,0.4)",letterSpacing:1}}>
+              {track.style.toUpperCase()}
+              {loading&&" · 加载中…"}
+            </div>
+          </div>
+
+          {/* 进度感知波形（纯装饰，随播放状态动） */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:2,height:24,marginBottom:14}}>
+            {Array.from({length:16}).map((_,i)=>(
+              <div key={i} style={{
+                width:3,borderRadius:2,
+                background:playing?"#7c6fff":"rgba(150,130,255,0.2)",
+                height:playing?`${8+Math.abs(Math.sin(i*0.7))*14}px`:"4px",
+                transition:"height 0.4s ease",
+                animationDelay:`${i*0.05}s`,
+              }}/>
+            ))}
+          </div>
+
+          {/* 控制按钮行 */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:14}}>
+            <button onClick={goPrev} style={{background:"none",border:"none",color:"rgba(180,160,255,0.6)",cursor:"pointer",fontSize:18,padding:4}} title="上一首">⏮</button>
+            <button onClick={toggle} style={{
+              width:44,height:44,borderRadius:"50%",
+              background:"linear-gradient(135deg,#5b3fff,#9b59ff)",
+              border:"none",color:"#fff",cursor:"pointer",fontSize:20,
+              boxShadow:"0 4px 16px rgba(91,63,255,0.5)",
+              display:"flex",alignItems:"center",justifyContent:"center",
+              opacity:loading?0.6:1,
+            }}>
+              {loading?"…":playing?"⏸":"▶"}
+            </button>
+            <button onClick={goNext} style={{background:"none",border:"none",color:"rgba(180,160,255,0.6)",cursor:"pointer",fontSize:18,padding:4}} title="下一首">⏭</button>
+          </div>
+
+          {/* 随机 / 顺序 切换 */}
+          <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
+            <button onClick={()=>setShuffle(s=>!s)} style={{
+              display:"flex",alignItems:"center",gap:5,
+              background:shuffle?"rgba(124,111,255,0.2)":"rgba(100,80,200,0.08)",
+              border:shuffle?"1px solid rgba(124,111,255,0.5)":"1px solid rgba(150,130,255,0.2)",
+              borderRadius:20,padding:"4px 12px",cursor:"pointer",
+              color:shuffle?"#c8b8ff":"rgba(180,160,255,0.45)",fontSize:11,transition:"all 0.2s",
+            }}>
+              <span>{shuffle?"🔀":"➡️"}</span>
+              <span>{shuffle?(lang==="zh"?"随机播放":"Shuffle"):(lang==="zh"?"顺序播放":"Sequential")}</span>
+            </button>
+          </div>
+
+          {/* 曲目列表 */}
+          <div style={{maxHeight:140,overflowY:"auto",marginBottom:12}}>
+            {BG_TRACKS.map((t,i)=>(
+              <div key={i} onClick={()=>{historyRef.current.push(trackIdx);setTrackIdx(i);}} style={{
+                display:"flex",alignItems:"center",gap:8,padding:"6px 8px",borderRadius:8,
+                cursor:"pointer",background:i===trackIdx?"rgba(124,111,255,0.15)":"none",
+                marginBottom:2,transition:"background 0.15s",
+              }}>
+                <span style={{fontSize:12}}>{({ambient:"🌌",meditation:"🪷",zen:"☯️"})[t.style]||"🎵"}</span>
+                <span style={{fontSize:11,color:i===trackIdx?"#e8e0ff":"rgba(180,160,255,0.6)",flex:1}}>{t.name}</span>
+                {i===trackIdx&&playing&&<span style={{fontSize:10,color:"#7c6fff"}}>♪</span>}
+              </div>
+            ))}
+          </div>
+
+          {/* 音量 */}
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:12,color:"rgba(180,160,255,0.4)"}}>🔈</span>
+            <input type="range" min="0" max="1" step="0.05" value={volume}
+              onChange={e=>setVolume(parseFloat(e.target.value))}
+              style={{flex:1,accentColor:"#7c6fff",cursor:"pointer",height:3}}/>
+            <span style={{fontSize:12,color:"rgba(180,160,255,0.4)"}}>🔊</span>
+          </div>
+          <div style={{marginTop:8,fontSize:10,color:"rgba(180,160,255,0.25)",textAlign:"center"}}>
+            CC0 · {lang==="zh"?"免版权":"Royalty-free"}
+          </div>
+        </div>
+      )}
+
+      {/* 浮动主按钮 */}
+      <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",gap:6}}>
+        {/* 随机/顺序快捷指示 */}
+        {playing&&(
+          <div style={{fontSize:14,opacity:.5}} title={shuffle?"随机":"顺序"}>
+            {shuffle?"🔀":"➡️"}
+          </div>
+        )}
+        <button onClick={()=>{
+            if(!showCtrl){setShowCtrl(true);if(!started)toggle();}
+            else setShowCtrl(false);
+          }}
+          style={{
+            width:46,height:46,borderRadius:"50%",
+            background:playing
+              ?"linear-gradient(135deg,#5b3fff,#9b59ff)"
+              :"rgba(100,80,200,0.18)",
+            border:"1px solid rgba(150,130,255,0.35)",
+            color:playing?"#fff":"rgba(180,160,255,0.65)",
+            cursor:"pointer",fontSize:19,
+            boxShadow:playing?"0 4px 22px rgba(91,63,255,0.55)":"none",
+            transition:"all 0.3s",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            animation:playing?"pulse 3s ease infinite":"none",
+          }}
+          title={lang==="zh"?"背景音乐":"Background Music"}
+        >🎵</button>
+      </div>
+    </div>
+  );
+}
+
+function StarField(){
+  const ref=useRef();
+  useEffect(()=>{
+    const c=ref.current,ctx=c.getContext("2d");
+    const resize=()=>{c.width=window.innerWidth;c.height=window.innerHeight;};
+    resize();window.addEventListener("resize",resize);
+    const stars=Array.from({length:250},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+.2,ph:Math.random()*Math.PI*2,sp:Math.random()*.004+.001}));
+    let id;const draw=t=>{ctx.clearRect(0,0,c.width,c.height);stars.forEach(s=>{ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(200,210,255,${.25+.75*Math.abs(Math.sin(t*s.sp+s.ph))})`;ctx.fill();});id=requestAnimationFrame(draw);};
+    id=requestAnimationFrame(draw);
+    return()=>{cancelAnimationFrame(id);window.removeEventListener("resize",resize);};
+  },[]);
+  return <canvas ref={ref} style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0}}/>;
+}
+
+// ─── Pi Network Authentication ────────────────────────────────
+// Follows pi-sdk-js PiService pattern:
+// 1. Pi.init() is treated as a Promise and fully awaited
+// 2. Auto-authenticates on mount inside Pi Browser
+// 3. Access token is validated server-side via GET /api/pi/me
+//    which proxies to https://api.minepi.com/v2/me
+// 4. Falls back to demo mode when window.Pi is absent (dev)
+
+// Inline backend: validates the Pi access token against Pi Platform API.
+// In production replace this stub with a real server endpoint.
+async function validatePiToken(accessToken) {
+  try {
+    // Call Pi Platform /v2/me — no API key needed, Bearer token only
+    const res = await fetch("https://api.minepi.com/v2/me", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    // Pi returns { uid, username, credentials: { scopes } }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function usePiNetwork() {
+  const [piUser,    setPiUser]    = useState(null);
+  const [piLoading, setPiLoading] = useState(false);
+  const [piError,   setPiError]   = useState(null);
+  const piInitialized = useRef(false);
+
+  // Core auth function — used both for auto-login and manual trigger
+  const connectPi = useCallback(async () => {
+    // ── Demo mode (not inside Pi Browser) ────────────────────
+    if (!window.Pi) {
+      setPiLoading(true);
+      await new Promise(r => setTimeout(r, 1200));
+      setPiUser({ username: "soul_pioneer_π", uid: "demo-uid-000", demo: true });
+      setPiLoading(false);
+      return true;
+    }
+
+    setPiLoading(true);
+    setPiError(null);
+    try {
+      // Step 1 — await Pi.init() as a Promise so SDK is fully ready
+      // Pi.init returns void in older SDK builds, so we normalise it.
+      const initResult = window.Pi.init({ version: "2.0", sandbox: true });
+      if (initResult && typeof initResult.then === "function") {
+        await initResult;
+      }
+      piInitialized.current = true;
+
+      // Step 2 — authenticate with "username" scope only
+      const auth = await window.Pi.authenticate(
+        ["username"],
+        (payment) => {
+          // Required incomplete-payment callback — log and ignore for now
+          console.warn("Incomplete payment found:", payment?.identifier);
+        }
+      );
+
+      // Step 3 — validate access token server-side via /v2/me
+      const verified = await validatePiToken(auth.accessToken);
+      if (!verified) {
+        setPiError("Token validation failed. Please try again.");
+        setPiLoading(false);
+        return false;
+      }
+
+      // Merge Pi SDK user with verified Platform API user
+      setPiUser({
+        username:    verified.username || auth.user.username,
+        uid:         verified.uid      || auth.user.uid,
+        accessToken: auth.accessToken,
+        demo:        false,
+      });
+      setPiLoading(false);
+      return true;
+    } catch (err) {
+      const msg = err?.message || "Authentication cancelled.";
+      setPiError(msg);
+      setPiLoading(false);
+      return false;
+    }
+  }, []);
+
+  // Auto-authenticate on mount
+  useEffect(() => {
+    connectPi();
+  }, [connectPi]);
+
+  // Pi Platform API helpers — sandbox mode, no API key needed for user-scoped calls
+  // In production, move approve/complete to your own backend server.
+  const piApprove = async (paymentId, accessToken) => {
+    try {
+      // Pi Platform: approve a payment (sandbox)
+      const res = await fetch(
+        `https://api.minepi.com/v2/payments/${paymentId}/approve`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return res.ok;
+    } catch { return false; }
+  };
+
+  const piComplete = async (paymentId, txid, accessToken) => {
+    try {
+      const res = await fetch(
+        `https://api.minepi.com/v2/payments/${paymentId}/complete`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ txid }),
+        }
+      );
+      return res.ok;
+    } catch { return false; }
+  };
+
+  const payWithPi = useCallback(async (amount, memo) => {
+    // ── Demo mode (no Pi Browser) ─────────────────────────────
+    if (!window.Pi) {
+      await new Promise(r => setTimeout(r, 1800));
+      return { success: true, txid: "demo_tx_" + Math.random().toString(36).slice(2, 10) };
+    }
+    // ── Ensure SDK initialised ────────────────────────────────
+    if (!piInitialized.current) {
+      const initResult = window.Pi.init({ version: "2.0", sandbox: true });
+      if (initResult && typeof initResult.then === "function") await initResult;
+      piInitialized.current = true;
+    }
+
+    // Get current user's access token from piUser ref for API calls
+    const accessToken = piUser?.accessToken || null;
+
+    return new Promise(res => {
+      window.Pi.createPayment(
+        { amount, memo, metadata: { app: "soul-haven", memo } },
+        {
+          // Step 1 — SDK signals payment is ready: approve it via Pi Platform API
+          onReadyForServerApproval: async (paymentId) => {
+            console.log("[Pi] Approving payment:", paymentId);
+            if (accessToken) {
+              const ok = await piApprove(paymentId, accessToken);
+              if (!ok) console.warn("[Pi] Approve call failed — Pi SDK will retry");
+            } else {
+              // No token yet: log and let Pi SDK handle retry
+              console.warn("[Pi] No accessToken for approve — payment may stall");
+            }
+          },
+          // Step 2 — blockchain tx confirmed: complete via Pi Platform API
+          onReadyForServerCompletion: async (paymentId, txid) => {
+            console.log("[Pi] Completing payment:", paymentId, txid);
+            if (accessToken) {
+              await piComplete(paymentId, txid, accessToken);
+            }
+            res({ success: true, txid });
+          },
+          onCancel: () => {
+            console.log("[Pi] Payment cancelled");
+            res({ success: false, reason: "cancelled" });
+          },
+          onError: (err, payment) => {
+            console.error("[Pi] Payment error:", err, payment);
+            res({ success: false, reason: err?.message || "unknown error" });
+          },
+        }
+      );
+    });
+  }, [piUser]);
+
+  return { piUser, connectPi, payWithPi, piLoading, piError };
+}
+
+function LangPicker({lang,setLang}){
+  const [open,setOpen]=useState(false);
+  const ref=useRef();
+  const cur=LANG_LIST.find(l=>l.code===lang)||LANG_LIST[0];
+  useEffect(()=>{
+    if(!open)return;
+    const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
+    document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);
+  },[open]);
+  return(
+    <div ref={ref} style={{position:"relative",flexShrink:0}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:5,background:open?"rgba(100,80,200,0.3)":"rgba(255,255,255,0.05)",border:"1px solid rgba(150,130,255,0.25)",borderRadius:9,padding:"5px 12px",cursor:"pointer",color:"#c8b8ff",fontSize:12,transition:"all 0.2s"}}>
+        <span style={{fontSize:15}}>{cur.flag}</span><span>{cur.label}</span>
+        <span style={{opacity:.5,fontSize:9,transform:open?"rotate(180deg)":"none",transition:"transform 0.2s",display:"inline-block"}}>▼</span>
+      </button>
+      {open&&(
+        <div style={{position:"fixed",top:58,right:12,background:"rgba(10,6,30,0.97)",border:"1px solid rgba(150,130,255,0.25)",borderRadius:14,padding:10,zIndex:500,width:264,boxShadow:"0 12px 40px rgba(0,0,0,0.7)",backdropFilter:"blur(16px)",display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4,animation:"fadeUp 0.15s ease"}}>
+          {LANG_LIST.map(l=>(
+            <button key={l.code} onClick={()=>{setLang(l.code);setOpen(false);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:lang===l.code?"rgba(100,80,200,0.4)":"rgba(255,255,255,0.04)",border:lang===l.code?"1px solid rgba(150,130,255,0.5)":"1px solid transparent",borderRadius:10,padding:"8px 6px",cursor:"pointer",color:lang===l.code?"#e8e0ff":"rgba(180,160,255,0.65)",fontSize:11,transition:"all 0.15s"}}>
+              <span style={{fontSize:18,lineHeight:1}}>{l.flag}</span>
+              <span style={{fontSize:10,whiteSpace:"nowrap"}}>{l.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Nav({page,setPage,piUser,onConnect,piLoading,piError,lang,setLang}){
+  const tabs=[
+    {id:"home",label:tl("navHome",lang)},{id:"map",label:tl("navMap",lang)},
+    {id:"ritual",label:lang==="zh"?"祭奠&众神":"Ritual & Gods"},{id:"board",label:tl("navBoard",lang)},
+    {id:"capsule",label:tl("navCapsule",lang)},{id:"planet",label:tl("navPlanet",lang)},
+    {id:"plot",label:tl("navPlot",lang)},{id:"legacy",label:tl("navLegacy",lang)},
+    {id:"voice",label:tl("navVoice",lang)},
+  ];
+  return(
+    <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:"rgba(5,3,18,0.92)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(150,130,255,0.12)",padding:"0 12px"}}>
+      <div style={{maxWidth:980,margin:"0 auto",display:"flex",alignItems:"center",gap:2,height:52,overflowX:"auto"}}>
+        <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:17,color:"#c8b8ff",marginRight:10,whiteSpace:"nowrap",flexShrink:0}}>{tl("appName",lang)}</div>
+        {tabs.map(tb=>(
+          <button key={tb.id} onClick={()=>setPage(tb.id)} style={{background:page===tb.id?"rgba(100,80,200,0.25)":"none",border:page===tb.id?"1px solid rgba(150,130,255,0.3)":"1px solid transparent",borderRadius:9,padding:"5px 10px",color:page===tb.id?"#e8e0ff":"rgba(180,160,255,0.5)",fontSize:12,cursor:"pointer",fontFamily:"'Noto Serif SC',serif",whiteSpace:"nowrap",flexShrink:0,transition:"all 0.2s"}}>{tb.label}</button>
+        ))}
+        <div style={{marginLeft:"auto",display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
+          <LangPicker lang={lang} setLang={setLang}/>
+          {piUser ? (
+            // ── Authenticated state ──────────────────────────
+            <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:"rgba(100,80,200,0.15)",border:"1px solid rgba(150,130,255,0.25)",borderRadius:9}}>
+              <div style={{width:5,height:5,borderRadius:"50%",background:piUser.demo?"#fbbf24":"#4ade80",boxShadow:`0 0 6px ${piUser.demo?"#fbbf24":"#4ade80"}`}}/>
+              <span style={{fontSize:11,color:"#c8b8ff"}}>π {piUser.username}{piUser.demo?" (demo)":""}</span>
+            </div>
+          ) : piLoading ? (
+            // ── Loading / authenticating state ───────────────
+            <div style={{display:"flex",alignItems:"center",gap:7,padding:"5px 12px",background:"rgba(100,80,200,0.1)",border:"1px solid rgba(150,130,255,0.2)",borderRadius:9}}>
+              <div style={{width:5,height:5,borderRadius:"50%",background:"#a78bfa",animation:"pulse 1s ease infinite"}}/>
+              <span style={{fontSize:11,color:"rgba(180,160,255,0.6)"}}>{lang==="zh"?"Pi 验证中…":"Connecting Pi…"}</span>
+            </div>
+          ) : (
+            // ── Sign-in button (manual trigger / retry) ──────
+            <button
+              onClick={onConnect}
+              title={piError || undefined}
+              style={{...S.btn,padding:"7px 14px",fontSize:11,
+                background: piError
+                  ? "linear-gradient(135deg,#7f1d1d,#dc2626)"
+                  : "linear-gradient(135deg,#5b3fff,#9b59ff)",
+              }}
+            >
+              {piError
+                ? (lang==="zh"?"重试 Pi 登录":"Retry Pi Sign-in")
+                : tl("connectPiBtn",lang)}
+            </button>
+          )}
+        </div>
+      </div>
+      {/* Error banner */}
+      {piError&&!piUser&&(
+        <div style={{background:"rgba(127,29,29,0.7)",borderTop:"1px solid rgba(239,68,68,0.3)",padding:"4px 16px",fontSize:11,color:"#fca5a5",textAlign:"center"}}>
+          {piError}
+        </div>
+      )}
+    </nav>
+  );
+}
+
+function HomePage({profile,setProfile,piUser,connectPi,payWithPi,lang}){
+  const [step,setStep]=useState(profile.name?"card":"landing");
+  const [mintStatus,setMintStatus]=useState(null);
+  const [connecting,setConnecting]=useState(false);
+  const handleMint=async()=>{
+    setMintStatus("paying");
+    const r=await payWithPi(1,"Soul NFT");
+    if(r.success){setMintStatus("minting");await new Promise(x=>setTimeout(x,2000));setProfile(p=>({...p,nft:true,txid:r.txid}));setMintStatus("done");}
+    else setMintStatus(null);
+  };
+  const days=profile.birth?calcDays(profile.birth):0;
+  const tc=THEME_CONFIG[profile.theme]||THEME_CONFIG.cosmos;
+
+  if(step==="landing") return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"calc(100vh - 52px)",padding:"40px 24px",textAlign:"center",position:"relative",zIndex:2}}>
+      <div style={{fontSize:11,letterSpacing:5,color:"rgba(180,160,255,0.4)",marginBottom:12,animation:"fadeUp 1s ease both"}}>SOUL HAVEN · PI NETWORK</div>
+      <h1 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:"clamp(44px,10vw,72px)",fontWeight:400,margin:"0 0 20px",background:"linear-gradient(135deg,#c8b8ff,#e8d8ff,#a898ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"fadeUp 1s 0.2s ease both,glow 4s 1s ease infinite"}}>{tl("tagline",lang)}</h1>
+      <p style={{fontSize:15,color:"rgba(200,190,255,0.6)",lineHeight:2.1,maxWidth:300,margin:"0 0 44px",animation:"fadeUp 1s 0.4s ease both",whiteSpace:"pre-line"}}>{tl("sub",lang)}</p>
+      <button style={{...S.btn,fontSize:16,padding:"16px 40px",animation:"fadeUp 1s 0.6s ease both"}} onClick={()=>setStep("form")}>{tl("cta",lang)}</button>
+      <div style={{marginTop:40,fontSize:11,color:"rgba(150,130,255,0.3)",letterSpacing:3,animation:"fadeUp 1s 0.8s ease both"}}>{tl("eternal",lang)}</div>
+    </div>
+  );
+
+  if(step==="form") return(
+    <div style={{maxWidth:440,margin:"0 auto",padding:"32px 20px",position:"relative",zIndex:2}}>
+      <button onClick={()=>setStep("landing")} style={{background:"none",border:"none",color:"rgba(180,160,255,0.4)",cursor:"pointer",fontSize:13,letterSpacing:2,marginBottom:28,padding:0}}>{tl("backBtn",lang)}</button>
+      <h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:28,color:"#e8e0ff",margin:"0 0 28px"}}>{tl("appName",lang)}</h2>
+      <div style={{marginBottom:16}}>
+        <label style={S.label}>{tl("soulName",lang)}</label>
+        <input style={S.input} placeholder={tl("soulNamePh",lang)} value={profile.name||""} onChange={e=>setProfile(p=>({...p,name:e.target.value}))}/>
+      </div>
+      <div style={{marginBottom:16}}>
+        <label style={S.label}>{tl("birthDate",lang)}</label>
+        <input style={S.input} type="date" value={profile.birth||""} onChange={e=>setProfile(p=>({...p,birth:e.target.value}))}/>
+        {profile.birth&&<div style={{marginTop:8,fontSize:12,color:"rgba(180,160,255,0.5)"}}>{tl("daysWalked",lang)} <span style={{color:"#a898ff"}}>{calcDays(profile.birth).toLocaleString()}</span>{tl("daysSuffix",lang)}</div>}
+      </div>
+      <div style={{marginBottom:16}}>
+        <label style={S.label}>{tl("chooseTheme",lang)} <span style={{color:"rgba(180,160,255,0.3)"}}>{tl("kindsPrefix",lang)}{Object.keys(THEME_CONFIG).length}{tl("kindsSuffix",lang)}</span></label>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,maxHeight:300,overflowY:"auto"}}>
+          {Object.entries(THEME_CONFIG).map(([id,tc])=>(
+            <div key={id} onClick={()=>setProfile(p=>({...p,theme:id}))} style={{padding:"10px 8px",borderRadius:12,cursor:"pointer",textAlign:"center",border:profile.theme===id?`1px solid ${tc.color}`:"1px solid rgba(150,130,255,0.15)",background:profile.theme===id?glowA(tc.glow,"0.18"):"rgba(255,255,255,0.03)",transition:"all 0.2s",position:"relative"}}>
+              {profile.theme===id&&<div style={{position:"absolute",top:5,right:5,width:6,height:6,borderRadius:"50%",background:tc.color,boxShadow:`0 0 8px ${tc.color}`}}/>}
+              <div style={{fontSize:20,marginBottom:4}}>{tc.emoji}</div>
+              <div style={{fontSize:11,color:"#e8e0ff"}}>{tc[lang]||tc.en}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{marginBottom:24}}>
+        <label style={S.label}>{tl("epitaph",lang)} <span style={{color:"rgba(180,160,255,0.3)"}}>{tl("optional",lang)}</span></label>
+        <textarea style={{...S.input,height:90,resize:"none",lineHeight:1.9}} placeholder={tl("epitaphPh",lang)} value={profile.epitaph||""} onChange={e=>setProfile(p=>({...p,epitaph:e.target.value}))}/>
+      </div>
+      <button style={{...S.btn,width:"100%",opacity:profile.name&&profile.birth?1:0.4}} disabled={!profile.name||!profile.birth} onClick={()=>{setProfile(p=>({...p,created:true}));setStep("card");}}>{tl("engrave",lang)}</button>
+    </div>
+  );
+
+  return(
+    <div style={{maxWidth:520,margin:"0 auto",padding:"32px 20px",position:"relative",zIndex:2}}>
+      <div style={{...S.card,padding:"30px 26px",marginBottom:18,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${tc.color},transparent)`}}/>
+        <div style={{textAlign:"center",marginBottom:24}}>
+          <div style={{fontSize:46,marginBottom:8}}>{tc.emoji}</div>
+          <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:24,color:"#e8e0ff",letterSpacing:3}}>{profile.name}</div>
+          <div style={{fontSize:11,color:tc.color,letterSpacing:4,marginTop:4}}>SOUL · {tc[lang]||tc.en}</div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:18}}>
+          {[[tl("born",lang),profile.birth],[tl("soulAge",lang),`${(days/365.25).toFixed(1)} ${tl("yearsOld",lang)}`],[tl("walkedDays",lang),`${days.toLocaleString()}${tl("daysSuffix",lang)}`],[tl("dest",lang),tc[lang]||tc.en]].map(([k,v])=>(
+            <div key={k} style={{background:"rgba(255,255,255,0.04)",borderRadius:10,padding:"11px 13px",border:"1px solid rgba(150,130,255,0.12)"}}>
+              <div style={{fontSize:10,color:"rgba(180,160,255,0.45)",letterSpacing:2,marginBottom:4}}>{k}</div>
+              <div style={{fontSize:13,color:"#d4c8ff"}}>{v}</div>
+            </div>
+          ))}
+        </div>
+        {profile.epitaph&&<div style={{borderTop:"1px solid rgba(150,130,255,0.12)",paddingTop:14,marginBottom:14,fontSize:13,color:"rgba(220,210,255,0.8)",fontStyle:"italic",lineHeight:1.9}}>"{profile.epitaph}"</div>}
+        <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(100,80,200,0.1)",borderRadius:8,padding:"9px 12px",border:"1px solid rgba(120,100,255,0.18)"}}>
+          <div style={{width:5,height:5,borderRadius:"50%",background:profile.nft?"#4ade80":tc.color,boxShadow:`0 0 8px ${profile.nft?"#4ade80":tc.color}`,animation:"pulse 2s ease infinite"}}/>
+          <span style={{fontSize:11,color:"rgba(180,160,255,0.65)",letterSpacing:1}}>{profile.nft?`${tl("nftMintedLabel",lang)} · TX: ${(profile.txid||"").slice(0,12)}…`:`${tl("onChain",lang)} · ${soulId(profile.name)}`}</span>
+        </div>
+      </div>
+      {!profile.nft&&(
+        <div style={{...S.card,padding:"18px 22px",marginBottom:14,display:"flex",alignItems:"center",gap:14}}>
+          <div style={{fontSize:28}}>🔮</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,color:"#e8e0ff",marginBottom:3}}>{tl("mintNftLabel",lang)}</div>
+            <div style={{fontSize:11,color:"rgba(180,160,255,0.5)"}}>{tl("mintNftDesc",lang)}</div>
+          </div>
+          <button style={{...S.btn,padding:"9px 16px",fontSize:12,flexShrink:0}} onClick={handleMint} disabled={!!mintStatus}>
+            {mintStatus==="paying"?tl("mintPaying",lang):mintStatus==="minting"?tl("mintMinting",lang):mintStatus==="done"?tl("mintDone",lang):tl("mintCost",lang)}
+          </button>
+        </div>
+      )}
+      {!piUser&&(
+        <div style={{...S.card,padding:"16px 22px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onClick={async()=>{setConnecting(true);await connectPi();setConnecting(false);}}>
+          <div style={{fontSize:24}}>π</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,color:"#e8e0ff"}}>{tl("connectPiLabel",lang)}</div>
+            <div style={{fontSize:11,color:"rgba(180,160,255,0.5)"}}>{tl("connectPiDesc",lang)}</div>
+          </div>
+          <div style={{fontSize:13,color:"rgba(180,160,255,0.4)"}}>{connecting?"…":"→"}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MapPage({lang}){
+  const canvasRef=useRef(null);
+  const camRef=useRef({theta:0.3,phi:0.2,r:300});
+  const dragRef=useRef({on:false,x:0,y:0});
+  const hoverRef=useRef(null);
+  const selRef=useRef(null);
+  const [selected,setSelected]=useState(null);
+  const [filter,setFilter]=useState("all");
+  const souls3d=MOCK_SOULS.map((s,i)=>{
+    const phi=Math.acos(1-2*(i+.5)/MOCK_SOULS.length);
+    const theta=Math.PI*(1+Math.sqrt(5))*i;
+    const r=s.nft?88:102;
+    return{...s,ox:r*Math.sin(phi)*Math.cos(theta),oy:r*Math.cos(phi),oz:r*Math.sin(phi)*Math.sin(theta)};
+  });
+  useEffect(()=>{
+    const canvas=canvasRef.current;if(!canvas)return;
+    const ctx=canvas.getContext("2d");let animId;
+    const syncSize=()=>{const r=canvas.getBoundingClientRect();if(canvas.width!==Math.round(r.width)||canvas.height!==Math.round(r.height)){canvas.width=Math.round(r.width);canvas.height=Math.round(r.height);}};
+    syncSize();const ro=new ResizeObserver(syncSize);ro.observe(canvas);
+    const bgStars=Array.from({length:200},()=>({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.2+.2,ph:Math.random()*Math.PI*2,sp:Math.random()*.003+.001}));
+    const project=(ox,oy,oz)=>{
+      const{theta,phi,r}=camRef.current;
+      const cT=Math.cos(theta),sT=Math.sin(theta),cP=Math.cos(phi),sP=Math.sin(phi);
+      const rx=ox*cT+oz*sT,rz=-ox*sT+oz*cT,ry2=oy*cP-rz*sP,rz2=oy*sP+rz*cP;
+      const fov=r+50,sc=fov/(fov+rz2+30);
+      return{sx:canvas.width/2+rx*sc*1.5,sy:canvas.height/2-ry2*sc*1.3,sc,depth:rz2};
+    };
+    const render=t=>{
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle="#050312";ctx.fillRect(0,0,canvas.width,canvas.height);
+      const ng=ctx.createRadialGradient(canvas.width*.45,canvas.height*.4,10,canvas.width*.45,canvas.height*.4,200);
+      ng.addColorStop(0,"rgba(91,63,255,0.05)");ng.addColorStop(1,"transparent");
+      ctx.fillStyle=ng;ctx.fillRect(0,0,canvas.width,canvas.height);
+      bgStars.forEach(s=>{const op=.15+.55*Math.abs(Math.sin(t*.001*s.sp+s.ph));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(200,210,255,${op})`;ctx.fill();});
+      if(!dragRef.current.on)camRef.current.theta+=.0012;
+      const visible=(filter==="all"?souls3d:souls3d.filter(s=>s.theme===filter)).map(s=>({...s,...project(s.ox,s.oy,s.oz)})).sort((a,b)=>a.depth-b.depth);
+      const nftV=visible.filter(s=>s.nft);
+      ctx.save();
+      for(let i=0;i<nftV.length-1;i++){const a=nftV[i],b=nftV[i+1],op=Math.max(0,.07*(a.sc+b.sc));ctx.strokeStyle=`rgba(150,130,255,${op})`;ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(a.sx,a.sy);ctx.lineTo(b.sx,b.sy);ctx.stroke();}
+      ctx.restore();
+      ctx.save();ctx.globalAlpha=.04;
+      [70,90,110].forEach(rr=>{ctx.beginPath();for(let i=0;i<=64;i++){const a=i/64*Math.PI*2,p=project(rr*Math.cos(a),0,rr*Math.sin(a));i===0?ctx.moveTo(p.sx,p.sy):ctx.lineTo(p.sx,p.sy);}ctx.strokeStyle="#7c6fff";ctx.lineWidth=.5;ctx.stroke();});
+      ctx.restore();
+      visible.forEach(soul=>{
+        const tc=THEME_CONFIG[soul.theme],isHov=hoverRef.current===soul.id,isSel=selRef.current===soul.id;
+        const pulse=.75+.25*Math.sin(t*.003+soul.ox*.05),baseR=soul.nft?6.5:4,rad=baseR*soul.sc*(isSel?1.75:isHov?1.3:1)*pulse;
+        const grad=ctx.createRadialGradient(soul.sx,soul.sy,0,soul.sx,soul.sy,rad*(isSel?5:3));
+        const ga=soul.sc*(isSel?.78:isHov?.52:.22);
+        grad.addColorStop(0,tc.color+Math.round(ga*255).toString(16).padStart(2,"0"));grad.addColorStop(1,"transparent");
+        ctx.fillStyle=grad;ctx.beginPath();ctx.arc(soul.sx,soul.sy,rad*(isSel?5:3),0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(soul.sx,soul.sy,rad,0,Math.PI*2);ctx.fillStyle=tc.color;ctx.fill();
+        if(soul.nft){ctx.beginPath();ctx.arc(soul.sx,soul.sy,rad+2.5*soul.sc,0,Math.PI*2);ctx.strokeStyle=tc.color+"55";ctx.lineWidth=.8*soul.sc;ctx.stroke();}
+        if(isHov||isSel){ctx.font=`${Math.max(10,Math.round(12*soul.sc))}px 'Noto Serif SC',serif`;const tw=ctx.measureText(`${tc.emoji} ${soul.name}`).width,lx=soul.sx+rad+6,ly=soul.sy+4;ctx.fillStyle="rgba(5,3,18,0.88)";ctx.fillRect(lx-2,ly-14*soul.sc,tw+10,17*soul.sc);ctx.fillStyle="#e8e0ff";ctx.fillText(`${tc.emoji} ${soul.name}`,lx+2,ly);}
+      });
+      ctx.font="11px monospace";ctx.fillStyle="rgba(180,160,255,0.28)";ctx.fillText(`${visible.length}${tl("mapSoulsUnit",lang)}`,12,canvas.height-12);
+      animId=requestAnimationFrame(render);
+    };
+    animId=requestAnimationFrame(render);
+    const xy=e=>e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};
+    const onDown=e=>{const{x,y}=xy(e);dragRef.current={on:true,x,y};};
+    const onMove=e=>{
+      const{x,y}=xy(e);
+      if(dragRef.current.on){camRef.current.theta+=(x-dragRef.current.x)*.006;camRef.current.phi+=(y-dragRef.current.y)*.004;camRef.current.phi=Math.max(-1.35,Math.min(1.35,camRef.current.phi));dragRef.current={on:true,x,y};}
+      const rect=canvas.getBoundingClientRect(),mx=x-rect.left,my=y-rect.top;
+      const all=filter==="all"?souls3d:souls3d.filter(s=>s.theme===filter);
+      let hit=null,minD=22;all.forEach(s=>{const p=project(s.ox,s.oy,s.oz),d=Math.hypot(p.sx-mx,p.sy-my);if(d<minD){minD=d;hit=s.id;}});
+      hoverRef.current=hit;canvas.style.cursor=hit?"pointer":"grab";
+    };
+    const onUp=e=>{
+      const{x,y}=xy(e);
+      if(dragRef.current.on&&Math.hypot(x-dragRef.current.x,y-dragRef.current.y)<5){
+        if(hoverRef.current){const next=selRef.current===hoverRef.current?null:hoverRef.current;selRef.current=next;setSelected(next?souls3d.find(s=>s.id===next):null);}
+        else{selRef.current=null;setSelected(null);}
+      }
+      dragRef.current.on=false;
+    };
+    const onWheel=e=>{camRef.current.r=Math.max(140,Math.min(580,camRef.current.r+e.deltaY*.28));e.preventDefault();};
+    canvas.addEventListener("mousedown",onDown);canvas.addEventListener("mousemove",onMove);canvas.addEventListener("mouseup",onUp);
+    canvas.addEventListener("mouseleave",()=>{dragRef.current.on=false;hoverRef.current=null;});
+    canvas.addEventListener("wheel",onWheel,{passive:false});
+    canvas.addEventListener("touchstart",onDown,{passive:true});canvas.addEventListener("touchmove",onMove,{passive:true});canvas.addEventListener("touchend",onUp);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();canvas.removeEventListener("mousedown",onDown);canvas.removeEventListener("mousemove",onMove);canvas.removeEventListener("mouseup",onUp);canvas.removeEventListener("wheel",onWheel);canvas.removeEventListener("touchstart",onDown);canvas.removeEventListener("touchmove",onMove);canvas.removeEventListener("touchend",onUp);};
+  },[filter,lang]);
+  return(
+    <div style={{...S.section,padding:"16px 16px 24px"}}>
+      <div style={{marginBottom:10}}>
+        <h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:24,color:"#e8e0ff",margin:"0 0 2px"}}>{tl("mapTitle",lang)}</h2>
+        <p style={{fontSize:12,color:"rgba(180,160,255,0.45)",margin:0}}>{tl("mapSub",lang)}</p>
+      </div>
+      <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
+        {[{id:"all",label:tl("mapAll",lang),emoji:"🌐",color:null},...Object.entries(THEME_CONFIG).map(([id,tc])=>({id,label:tc[lang]||tc.en,emoji:tc.emoji,color:tc.color}))].map(f=>(
+          <button key={f.id} onClick={()=>{setFilter(f.id);selRef.current=null;setSelected(null);}} style={{...S.ghost,padding:"4px 10px",fontSize:11,background:filter===f.id?"rgba(100,80,200,0.3)":"rgba(100,80,200,0.08)",color:filter===f.id?"#e8e0ff":"rgba(180,160,255,0.5)",border:filter===f.id&&f.color?`1px solid ${f.color}55`:"1px solid rgba(150,130,255,0.18)"}}>
+            {f.emoji} {f.label}
+          </button>
+        ))}
+      </div>
+      <div style={{borderRadius:16,overflow:"hidden",marginBottom:14,background:"#050312",border:"1px solid rgba(150,130,255,0.15)",height:"calc(100vh - 220px)",minHeight:420,maxHeight:680}}>
+        <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block",cursor:"grab",touchAction:"none"}}/>
+      </div>
+      {selected&&(
+        <div style={{...S.card,padding:"18px 22px",animation:"fadeUp 0.3s ease"}}>
+          <div style={{display:"flex",alignItems:"flex-start",gap:14}}>
+            <div style={{fontSize:32}}>{THEME_CONFIG[selected.theme].emoji}</div>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                <span style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:19,color:"#e8e0ff"}}>{selected.name}</span>
+                {selected.nft&&<span style={{fontSize:10,background:"linear-gradient(90deg,#5b3fff,#9b59ff)",padding:"2px 7px",borderRadius:20,color:"#fff"}}>NFT</span>}
+              </div>
+              <div style={{fontSize:12,color:"rgba(180,160,255,0.5)",marginBottom:8}}>{tl("mapBorn",lang)} {selected.birth} · {THEME_CONFIG[selected.theme][lang]||THEME_CONFIG[selected.theme].en}</div>
+              {selected.epitaph&&<div style={{fontSize:13,color:"rgba(220,210,255,0.8)",fontStyle:"italic",lineHeight:1.8,marginBottom:10}}>"{selected.epitaph}"</div>}
+              <div style={{display:"flex",gap:14,fontSize:12,color:"rgba(180,160,255,0.45)"}}>
+                <span>📜 {selected.messages}{tl("mapMessages",lang)}</span><span>⏳ {selected.capsules}{tl("mapCapsules",lang)}</span>
+              </div>
+            </div>
+            <button style={{...S.ghost,padding:"6px 12px",fontSize:12}} onClick={()=>{selRef.current=null;setSelected(null);}}>×</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RitualPage({profile,piUser,payWithPi,lang}){
+  const [tab,setTab]=useState("ritual");   // "ritual" | "temple"
+  const [done,setDone]=useState({});
+  const [activeMsg,setActiveMsg]=useState(null);
+  const [floats,setFloats]=useState([]);
+  // temple state
+  const [selGod,setSelGod]=useState(null);
+  const [wish,setWish]=useState("");
+  const [incenseDone,setIncenseDone]=useState({});
+  const [wishDone,setWishDone]=useState({});
+  const [wishing,setWishing]=useState(false);
+  const [incensing,setIncensing]=useState(false);
+  const [communityWishes]=useState([
+    {name:"苍海一粟",god:"guanyin",wish:"愿家人平安健康，岁岁无忧",time:"3小时前"},
+    {name:"林间听风",god:"caishen",wish:"新的一年生意兴隆，财源广进",time:"5小时前"},
+    {name:"极光舞者",god:"ganesha",wish:"愿考试顺利，前途光明无阻",time:"1天前"},
+    {name:"樱花落尘",god:"mary",wish:"愿逝去的亲人安息，天堂没有痛苦",time:"2天前"},
+  ]);
+
+  const doRitual=r=>{
+    if(done[r.id])return;setDone(d=>({...d,[r.id]:true}));setActiveMsg(r.msg[lang==="zh"?"zh":"en"]);
+    const fp=Array.from({length:10},(_,i)=>({id:Date.now()+i,char:["✦","✧","⋆","·","˙"][i%5],color:r.color,x:35+Math.random()*30,y:55+Math.random()*20}));
+    setFloats(f=>[...f,...fp]);setTimeout(()=>setFloats(f=>f.filter(p=>!fp.find(n=>n.id===p.id))),2000);setTimeout(()=>setActiveMsg(null),3200);
+  };
+
+  const burnIncense=async(god)=>{
+    if(incenseDone[god.id]||!piUser)return;
+    setIncensing(true);
+    await payWithPi(god.incensePrice,"众神殿-上香-"+god.id);
+    await new Promise(r=>setTimeout(r,1200));
+    setIncenseDone(d=>({...d,[god.id]:true}));
+    setIncensing(false);
+  };
+
+  const makeWish=async()=>{
+    if(!wish.trim()||!piUser||!selGod)return;
+    setWishing(true);
+    await payWithPi(.1,"众神殿-祈愿-"+selGod.id);
+    await new Promise(r=>setTimeout(r,1500));
+    setWishDone(d=>({...d,[selGod.id]:wish}));
+    setWish("");setWishing(false);
+  };
+
+  const godName=g=>lang==="zh"?g.name.zh:g.name.en;
+  const rLabel=r=>lang==="zh"?r.zh:r.en;
+
+  return(
+    <div style={S.section}>
+      {/* Tab switcher */}
+      <div style={{display:"flex",gap:8,marginBottom:20}}>
+        {[["ritual",tl("ritualTab",lang),"🕯️"],["temple",tl("templeTab",lang),"🏯"]].map(([id,label,emoji])=>(
+          <button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:"12px",borderRadius:14,border:tab===id?"1px solid rgba(150,130,255,0.5)":"1px solid rgba(150,130,255,0.15)",background:tab===id?"rgba(100,80,200,0.25)":"rgba(100,80,200,0.06)",color:tab===id?"#e8e0ff":"rgba(180,160,255,0.5)",fontSize:14,cursor:"pointer",fontFamily:"'Noto Serif SC',serif",transition:"all 0.2s"}}>
+            {emoji} {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── 祭奠仪式 tab ── */}
+      {tab==="ritual"&&(
+        <>
+          <div style={{marginBottom:16}}>
+            <h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:24,color:"#e8e0ff",margin:"0 0 4px"}}>{tl("ritualTitle",lang)}</h2>
+            <p style={{fontSize:13,color:"rgba(180,160,255,0.5)",margin:0}}>{tl("ritualSub",lang)}</p>
+          </div>
+          <div style={{...S.card,padding:"14px 18px",marginBottom:14,display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+            <span style={{fontSize:11,color:"rgba(180,160,255,0.4)"}}>{tl("ritualTo",lang)}</span>
+            {MOCK_SOULS.slice(0,5).map(s=>(
+              <div key={s.id} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",background:"rgba(100,80,200,0.12)",borderRadius:20,border:"1px solid rgba(150,130,255,0.15)"}}>
+                <span style={{fontSize:12}}>{THEME_CONFIG[s.theme].emoji}</span><span style={{fontSize:11,color:"#d4c8ff"}}>{s.name}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{...S.card,padding:"28px 20px",marginBottom:14,position:"relative",overflow:"hidden",minHeight:200}}>
+            <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 50% 100%,rgba(91,63,255,0.07),transparent 70%)"}}/>
+            <div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}>
+              {floats.map(p=><div key={p.id} style={{position:"absolute",left:`${p.x}%`,top:`${p.y}%`,fontSize:14,color:p.color,animation:"floatUp 2s ease-out forwards"}}>{p.char}</div>)}
+            </div>
+            {activeMsg&&(
+              <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",zIndex:10,pointerEvents:"none",animation:"fadeUp 0.4s ease",width:"80%"}}>
+                <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:15,color:"#e8d8ff",background:"rgba(12,8,35,0.92)",padding:"12px 20px",borderRadius:12,border:"1px solid rgba(150,130,255,0.2)",backdropFilter:"blur(8px)",textAlign:"center",lineHeight:1.8}}>{activeMsg}</div>
+              </div>
+            )}
+            <div style={{position:"relative",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+              {RITUALS.map(r=>{
+                const isDone=done[r.id];
+                return(
+                  <div key={r.id} onClick={()=>doRitual(r)} style={{textAlign:"center",padding:"16px 8px",borderRadius:14,cursor:isDone?"default":"pointer",background:isDone?`${r.color}15`:"rgba(255,255,255,0.03)",border:isDone?`1px solid ${r.color}44`:"1px solid rgba(150,130,255,0.15)",transition:"all 0.3s"}}>
+                    <div style={{fontSize:26,marginBottom:6,filter:isDone?`drop-shadow(0 0 8px ${r.color})`:"none",transition:"filter 0.5s"}}>{r.emoji}</div>
+                    <div style={{fontSize:11,color:isDone?r.color:"#e8e0ff"}}>{rLabel(r)}</div>
+                    {isDone&&<div style={{fontSize:10,color:r.color,marginTop:3}}>{tl("ritualDone",lang)}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{...S.card,padding:"14px 18px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+              <span style={{fontSize:12,color:"rgba(180,160,255,0.55)"}}>{tl("ritualProgress",lang)}</span>
+              <span style={{fontSize:12,color:"#c8b8ff"}}>{Object.keys(done).length} / {RITUALS.length}</span>
+            </div>
+            <div style={{height:4,background:"rgba(150,130,255,0.12)",borderRadius:2,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${Object.keys(done).length/RITUALS.length*100}%`,background:"linear-gradient(90deg,#5b3fff,#9b59ff)",borderRadius:2,transition:"width 0.5s ease"}}/>
+            </div>
+            {Object.keys(done).length===RITUALS.length&&<div style={{marginTop:10,textAlign:"center",fontSize:13,color:"#a898ff",fontFamily:"'Ma Shan Zheng',serif"}}>{tl("ritualComplete",lang)}</div>}
+          </div>
+        </>
+      )}
+
+      {/* ── 众神殿 tab ── */}
+      {tab==="temple"&&(
+        <>
+          <div style={{marginBottom:16}}>
+            <h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:24,color:"#e8e0ff",margin:"0 0 4px"}}>{tl("templeTitle",lang)}</h2>
+            <p style={{fontSize:13,color:"rgba(180,160,255,0.5)",margin:0}}>{tl("templeSub",lang)}</p>
+          </div>
+
+          {/* God grid */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10,marginBottom:16}}>
+            {GODS.map(god=>{
+              const isSelected=selGod?.id===god.id;
+              const isDone=incenseDone[god.id];
+              return(
+                <div key={god.id} onClick={()=>setSelGod(isSelected?null:god)}
+                  style={{...S.card,padding:"14px 10px",textAlign:"center",cursor:"pointer",
+                    border:isSelected?`1px solid ${god.color}`:`1px solid rgba(150,130,255,0.15)`,
+                    background:isSelected?`${god.glow.replace("0.5","0.12")}`:"rgba(255,255,255,0.02)",
+                    transition:"all 0.2s",position:"relative"}}>
+                  {isDone&&<div style={{position:"absolute",top:6,right:6,width:7,height:7,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 6px #4ade80"}}/>}
+                  <div style={{fontSize:28,marginBottom:6,filter:isSelected?`drop-shadow(0 0 10px ${god.color})`:"none",transition:"filter 0.3s"}}>{god.emoji}</div>
+                  <div style={{fontSize:11,color:"#e8e0ff",lineHeight:1.4,marginBottom:3}}>{godName(god)}</div>
+                  <div style={{fontSize:9,color:"rgba(180,160,255,0.45)"}}>{lang==="zh"?god.origin.zh:god.origin.en}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Selected god panel */}
+          {selGod&&(
+            <div style={{...S.card,padding:"22px",marginBottom:16,animation:"fadeUp 0.3s ease",border:`1px solid ${selGod.color}55`}}>
+              <div style={{position:"relative",marginBottom:0}}>
+                {/* God header */}
+                <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}>
+                  <div style={{fontSize:48,filter:`drop-shadow(0 0 16px ${selGod.color})`}}>{selGod.emoji}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:20,color:"#e8e0ff",marginBottom:3}}>{godName(selGod)}</div>
+                    <div style={{fontSize:11,color:"rgba(180,160,255,0.5)",marginBottom:4}}>{lang==="zh"?selGod.origin.zh:selGod.origin.en}</div>
+                    <div style={{fontSize:12,color:selGod.color}}>{lang==="zh"?selGod.domain.zh:selGod.domain.en}</div>
+                  </div>
+                  <button onClick={()=>setSelGod(null)} style={{background:"none",border:"none",color:"rgba(180,160,255,0.4)",cursor:"pointer",fontSize:18,alignSelf:"flex-start"}}>×</button>
+                </div>
+
+                {/* Blessing text */}
+                <div style={{padding:"12px 14px",background:`${selGod.glow.replace("0.5","0.08")}`,borderRadius:10,border:`1px solid ${selGod.color}33`,marginBottom:14}}>
+                  <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:13,color:"rgba(220,210,255,0.85)",lineHeight:1.9}}>
+                    {lang==="zh"?selGod.blessing.zh:selGod.blessing.en}
+                  </div>
+                </div>
+
+                {/* Burn incense button */}
+                {incenseDone[selGod.id]?(
+                  <div style={{padding:"12px",background:"rgba(74,222,128,0.08)",border:"1px solid rgba(74,222,128,0.25)",borderRadius:10,textAlign:"center",marginBottom:14,fontSize:13,color:"#4ade80"}}>
+                    🪷 {tl("templeIncenseDone",lang)}
+                  </div>
+                ):(
+                  <button style={{...S.btn,width:"100%",marginBottom:14,background:`linear-gradient(135deg,${selGod.color}88,${selGod.color})`,boxShadow:`0 4px 20px ${selGod.glow}`,opacity:piUser?1:0.5}}
+                    disabled={!piUser||incensing} onClick={()=>burnIncense(selGod)}>
+                    {incensing?tl("templeIncensing",lang):`${tl("templeIncenseBtn",lang)} · ${selGod.incensePrice}π`}
+                  </button>
+                )}
+
+                {/* Wish input */}
+                {wishDone[selGod.id]?(
+                  <div style={{padding:"12px 14px",background:"rgba(100,80,200,0.1)",borderRadius:10,border:"1px solid rgba(150,130,255,0.2)"}}>
+                    <div style={{fontSize:11,color:"rgba(180,160,255,0.5)",marginBottom:4}}>{tl("templeWishDone",lang)}</div>
+                    <div style={{fontSize:13,color:"rgba(220,210,255,0.85)",fontStyle:"italic"}}>"{wishDone[selGod.id]}"</div>
+                  </div>
+                ):(
+                  <div>
+                    <label style={S.label}>{tl("templePray",lang)}</label>
+                    <textarea style={{...S.input,height:80,resize:"none",lineHeight:1.9,marginBottom:10}}
+                      placeholder={(lang==="zh"?selGod.prayer.zh:selGod.prayer.en).replace("{name}",profile.name||"我")}
+                      value={wish} onChange={e=>setWish(e.target.value)}/>
+                    <button style={{...S.btn,width:"100%",opacity:wish.trim()&&piUser?1:0.4}} disabled={!wish.trim()||!piUser||wishing} onClick={makeWish}>
+                      {wishing?tl("templeWishing",lang):tl("templeWishBtn",lang)+" · 0.1π"}
+                    </button>
+                    {!piUser&&<div style={S.warn}>{tl("templePiWarn",lang)}</div>}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Community wishes */}
+          <div>
+            <div style={{fontSize:11,color:"rgba(180,160,255,0.4)",letterSpacing:2,marginBottom:10}}>{tl("templeWishes",lang)}</div>
+            <div style={{display:"flex",flexDirection:"column",gap:9}}>
+              {communityWishes.map((w,i)=>{
+                const g=GODS.find(g=>g.id===w.god)||GODS[0];
+                return(
+                  <div key={i} style={{...S.card,padding:"13px 16px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+                      <span style={{fontSize:20}}>{g.emoji}</span>
+                      <span style={{fontSize:12,color:"#e8e0ff"}}>{w.name}</span>
+                      <span style={{fontSize:11,color:g.color}}>{lang==="zh"?g.name.zh:g.name.en}</span>
+                      <span style={{fontSize:10,color:"rgba(180,160,255,0.35)",marginLeft:"auto"}}>{w.time}</span>
+                    </div>
+                    <div style={{fontSize:12,color:"rgba(220,210,255,0.75)",fontStyle:"italic",lineHeight:1.7}}>"{w.wish}"</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function BoardPage({profile,lang}){
+  const [msg,setMsg]=useState("");const [messages,setMessages]=useState(MOCK_MESSAGES);const [sending,setSending]=useState(false);
+  const send=async()=>{if(!msg.trim())return;setSending(true);await new Promise(r=>setTimeout(r,800));setMessages(m=>[{from:profile.name||"Soul",text:msg,time:"…",avatar:THEME_CONFIG[profile.theme||"cosmos"].emoji},...m]);setMsg("");setSending(false);};
+  return(
+    <div style={S.section}>
+      <div style={{marginBottom:20}}>
+        <h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:26,color:"#e8e0ff",margin:"0 0 4px"}}>{tl("boardTitle",lang)}</h2>
+        <p style={{fontSize:13,color:"rgba(180,160,255,0.5)",margin:0}}>{tl("boardSub",lang)}</p>
+      </div>
+      <div style={{...S.card,padding:"18px",marginBottom:18}}>
+        <label style={S.label}>{tl("boardLabel",lang)}</label>
+        <textarea value={msg} onChange={e=>setMsg(e.target.value)} style={{...S.input,height:88,resize:"none",lineHeight:1.9,marginBottom:10}} placeholder={tl("boardPh",lang)}/>
+        <div style={{display:"flex",justifyContent:"flex-end"}}>
+          <button style={{...S.btn,opacity:msg.trim()?1:0.4}} onClick={send} disabled={!msg.trim()||sending}>{sending?tl("boardSending",lang):tl("boardSend",lang)}</button>
+        </div>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {messages.map((m,i)=>(
+          <div key={i} style={{...S.card,padding:"16px 18px",animation:"fadeUp 0.4s ease",animationDelay:`${i*.04}s`,animationFillMode:"both"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+              <div style={{width:32,height:32,borderRadius:"50%",background:"rgba(100,80,200,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,border:"1px solid rgba(150,130,255,0.2)"}}>{m.avatar}</div>
+              <div><div style={{fontSize:13,color:"#e8e0ff"}}>{m.from}</div><div style={{fontSize:10,color:"rgba(180,160,255,0.4)"}}>{m.time}</div></div>
+            </div>
+            <div style={{fontSize:13,color:"rgba(220,210,255,0.8)",lineHeight:1.9}}>{m.text}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CapsulePage({profile,piUser,payWithPi,lang}){
+  const [capsules,setCapsules]=useState([
+    {id:1,title:"写给十年后的自己",openDate:"2034-01-01",locked:true,content:"",paid:true},
+    {id:2,title:"此刻的心情",openDate:"2026-12-31",locked:false,content:"今天的天空特别蓝，我想把这份心情留下来。",paid:true},
+  ]);
+  const [creating,setCreating]=useState(false);const [form,setForm]=useState({title:"",content:"",openDate:"",mode:"future"});const [paying,setPaying]=useState(false);
+  const today=new Date().toISOString().slice(0,10);
+  const create=async()=>{if(!form.title||!form.content||!form.openDate)return;setPaying(true);const r=await payWithPi(.5,"Soul Capsule");if(r.success){setCapsules(c=>[...c,{id:Date.now(),...form,locked:new Date(form.openDate)>new Date(),paid:true}]);setForm({title:"",content:"",openDate:""});setCreating(false);}setPaying(false);};
+  return(
+    <div style={S.section}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+        <div><h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:26,color:"#e8e0ff",margin:"0 0 4px"}}>{tl("capsuleTitle",lang)}</h2><p style={{fontSize:13,color:"rgba(180,160,255,0.5)",margin:0}}>{tl("capsuleSub",lang)}</p></div>
+        <button style={S.btn} onClick={()=>setCreating(true)}>{tl("capsuleNew",lang)}</button>
+      </div>
+      {creating&&(
+        <div style={{...S.card,padding:"22px",marginBottom:18,animation:"fadeUp 0.3s ease"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <span style={{fontSize:15,color:"#e8e0ff"}}>{tl("capsuleFormTitle",lang)}</span>
+            <button onClick={()=>setCreating(false)} style={{background:"none",border:"none",color:"rgba(180,160,255,0.4)",cursor:"pointer",fontSize:18}}>×</button>
+          </div>
+          {/* 模式选择：写给未来 / 写给过去 */}
+          <div style={{display:"flex",gap:8,marginBottom:16}}>
+            {[["future",lang==="zh"?"✉️ 写给未来的自己":"✉️ To Future Self"],["past",lang==="zh"?"📯 写给过去的自己":"📯 To Past Self"]].map(([mode,label])=>(
+              <button key={mode} onClick={()=>setForm(f=>({...f,mode,openDate:""}))}
+                style={{flex:1,padding:"9px",borderRadius:10,border:form.mode===mode?"1px solid rgba(150,130,255,0.5)":"1px solid rgba(150,130,255,0.15)",background:form.mode===mode?"rgba(100,80,200,0.25)":"rgba(100,80,200,0.05)",color:form.mode===mode?"#e8e0ff":"rgba(180,160,255,0.5)",fontSize:12,cursor:"pointer",transition:"all 0.2s"}}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div style={{marginBottom:12}}><label style={S.label}>{tl("capsuleNameLabel",lang)}</label><input style={S.input} type="text" placeholder={tl("capsuleNamePh",lang)} value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))}/></div>
+          <div style={{marginBottom:12}}>
+            <label style={S.label}>{form.mode==="past"?(lang==="zh"?"回到那一年":"Go back to the year"):(lang==="zh"?"开启日期":"Open Date")}</label>
+            <input style={S.input} type="date"
+              max={form.mode==="past"?today:undefined}
+              min={form.mode==="future"?today:undefined}
+              placeholder={form.mode==="past"?(lang==="zh"?"选择过去的某一天":"Pick a day in the past"):""}
+              value={form.openDate} onChange={e=>setForm(f=>({...f,openDate:e.target.value}))}/>
+            {form.mode==="past"&&form.openDate&&(
+              <div style={{marginTop:6,fontSize:11,color:"rgba(180,160,255,0.5)"}}>
+                {lang==="zh"?`🕰️ 穿越回 ${new Date().getFullYear()-new Date(form.openDate).getFullYear()} 年前，写信给那时的自己`
+                :`🕰️ Traveling back ${new Date().getFullYear()-new Date(form.openDate).getFullYear()} years, writing to your past self`}
+              </div>
+            )}
+          </div>
+          <div style={{marginBottom:12}}>
+            <label style={S.label}>{tl("capsuleContentLabel",lang)}</label>
+            <textarea style={{...S.input,height:110,resize:"none",lineHeight:1.9}}
+              placeholder={form.mode==="past"
+                ?(lang==="zh"?"亲爱的过去的自己，如果你能读到这封信……":"Dear past self, if you could read this letter…")
+                :tl("capsuleContentPh",lang)}
+              value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))}/>
+          </div>
+          <div style={{padding:"10px 14px",background:form.mode==="past"?"rgba(251,191,36,0.08)":"rgba(100,80,200,0.1)",borderRadius:10,marginBottom:14,border:form.mode==="past"?"1px solid rgba(251,191,36,0.2)":"1px solid rgba(150,130,255,0.15)"}}>
+            <div style={{fontSize:11,color:form.mode==="past"?"rgba(251,191,36,0.8)":"rgba(180,160,255,0.6)",lineHeight:1.8}}>
+              {form.mode==="past"
+                ?(lang==="zh"?"🕰️ 写给过去的自己 · 信件将永久封存于区块链，作为你存在过的证明 · 0.5π":"🕰️ Writing to your past self · Sealed on blockchain as proof of your existence · 0.5π")
+                :`π ${tl("capsuleNote",lang)}`}
+            </div>
+          </div>
+          <button style={{...S.btn,width:"100%",opacity:form.title&&form.content&&form.openDate&&piUser?1:0.4}} disabled={!form.title||!form.content||!form.openDate||!piUser||paying} onClick={create}>
+            {paying?tl("capsuleSealing",lang):form.mode==="past"?(lang==="zh"?"封存这封信给过去 0.5π ✦":"Seal to the Past 0.5π ✦"):tl("capsuleSeal",lang)}
+          </button>
+          {!piUser&&<div style={S.warn}>{tl("legacyPiWarn",lang)}</div>}
+        </div>
+      )}
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {capsules.map(cap=>(
+          <div key={cap.id} style={{...S.card,padding:"18px 22px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <div style={{fontSize:26}}>{cap.locked?"🔒":"📖"}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,color:"#e8e0ff",marginBottom:3}}>{cap.title}</div>
+                <div style={{fontSize:11,color:"rgba(180,160,255,0.5)"}}>{cap.locked?`🔐 ${cap.openDate} ${tl("capsuleLocked",lang)}`:`${tl("capsuleOpened",lang)} ${cap.openDate}`}</div>
+              </div>
+              {cap.paid&&<span style={{fontSize:10,color:"#a898ff",background:"rgba(100,80,200,0.2)",padding:"2px 8px",borderRadius:20}}>{tl("capsuleOnChain",lang)}</span>}
+            </div>
+            {!cap.locked&&cap.content&&<div style={{marginTop:12,paddingTop:12,borderTop:"1px solid rgba(150,130,255,0.1)",fontSize:13,color:"rgba(220,210,255,0.75)",lineHeight:1.9}}>{cap.content}</div>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── 改进版灵魂地块 ────────────────────────────────────────────
+function PlotPage({profile,piUser,payWithPi,lang}){
+  const [owned,setOwned]=useState(null);
+  const [selectedZone,setSelectedZone]=useState(null);
+  const [buying,setBuying]=useState(false);
+  const [transferName,setTransferName]=useState("");
+  const [transferring,setTransferring]=useState(false);
+  const [transferred,setTransferred]=useState(false);
+  const myX=useRef(20+Math.random()*60).current;
+  const myY=useRef(20+Math.random()*60).current;
+
+  const rarityColor={Genesis:"#fff7ae",Legendary:"#fbbf24",Epic:"#a78bfa",Rare:"#4ade80",Common:"#94a3b8",Free:"#6b7280"};
+  const zName=z=>lang==="zh"?z.zh:z.en;
+  const zDesc=z=>lang==="zh"?z.desc.zh:z.desc.en;
+  const zRarity=z=>z.rarity;
+  const zPerks=z=>lang==="zh"?z.perks.zh:z.perks.en;
+
+  const buy=async()=>{
+    if(!piUser||!selectedZone)return;
+    setBuying(true);
+    const r=await payWithPi(selectedZone.price,"灵魂地块-"+selectedZone.id);
+    if(r.success)setOwned(selectedZone);
+    setBuying(false);
+  };
+
+  const doTransfer=async()=>{
+    if(!transferName.trim())return;
+    setTransferring(true);
+    await new Promise(r=>setTimeout(r,1800));
+    setTransferring(false);setTransferred(true);
+  };
+
+  // Global stats
+  const totalOwned=PLOT_ZONES.reduce((a,z)=>a+z.sold,0);
+  const totalAll=PLOT_ZONES.reduce((a,z)=>a+z.total,0);
+
+  return(
+    <div style={S.section}>
+      <div style={{marginBottom:16}}>
+        <h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:26,color:"#e8e0ff",margin:"0 0 4px"}}>{tl("plotTitle",lang)}</h2>
+        <p style={{fontSize:13,color:"rgba(180,160,255,0.5)",margin:0}}>{tl("plotSub",lang)}</p>
+      </div>
+
+      {/* Global stats bar */}
+      <div style={{...S.card,padding:"14px 18px",marginBottom:16,display:"flex",gap:20,alignItems:"center",flexWrap:"wrap"}}>
+        <div style={{fontSize:12,color:"rgba(180,160,255,0.5)"}}>{tl("plotStats",lang)}</div>
+        {PLOT_ZONES.map(z=>(
+          <div key={z.id} style={{display:"flex",alignItems:"center",gap:6}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:z.color,boxShadow:`0 0 6px ${z.color}`}}/>
+            <span style={{fontSize:11,color:"rgba(180,160,255,0.6)"}}>{zName(z)}</span>
+            <span style={{fontSize:11,color:z.color,fontFamily:"monospace"}}>{z.sold}/{z.total}</span>
+          </div>
+        ))}
+        <div style={{marginLeft:"auto",fontSize:11,color:"rgba(180,160,255,0.4)"}}>
+          {tl("plotTotalOwned",lang)} <span style={{color:"#e8e0ff",fontWeight:"bold"}}>{totalOwned}</span> / {totalAll}
+        </div>
+      </div>
+
+      {/* Visual map */}
+      <div style={{...S.card,position:"relative",height:260,marginBottom:16,overflow:"hidden"}}>
+        <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(150,130,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(150,130,255,0.04) 1px,transparent 1px)",backgroundSize:"28px 28px"}}/>
+        {/* Zone rings — show inner 6 zones on map */}
+        {[
+          {z:PLOT_ZONES[0],size:"9%"},{z:PLOT_ZONES[1],size:"18%"},
+          {z:PLOT_ZONES[2],size:"29%"},{z:PLOT_ZONES[3],size:"40%"},
+          {z:PLOT_ZONES[4],size:"53%"},{z:PLOT_ZONES[5],size:"66%"},
+        ].map(({z,size})=>(
+          <div key={z.id} onClick={()=>setSelectedZone(selectedZone?.id===z.id?null:z)}
+            style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",
+              width:size,paddingTop:size,borderRadius:"50%",
+              border:`2px solid ${selectedZone?.id===z.id?z.color:z.color+"44"}`,
+              background:selectedZone?.id===z.id?`${z.color}15`:`${z.color}06`,
+              cursor:"pointer",transition:"all 0.2s",
+              boxShadow:selectedZone?.id===z.id?`0 0 20px ${z.color}33`:"none"}}>
+            <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",
+              fontSize:10,color:selectedZone?.id===z.id?z.color:"rgba(255,255,255,0.2)",
+              whiteSpace:"nowrap",fontFamily:"monospace",pointerEvents:"none"}}>
+              {selectedZone?.id===z.id?zName(z):""}
+            </div>
+          </div>
+        ))}
+        {/* Soul dots */}
+        {MOCK_SOULS.map(s=>{
+          const z=PLOT_ZONES.find(pz=>pz.id===s.plot)||PLOT_ZONES[3];
+          const tc=THEME_CONFIG[s.theme];
+          return(<div key={s.id} style={{position:"absolute",left:`${s.x}%`,top:`${s.y}%`,transform:"translate(-50%,-50%)",width:7,height:7,borderRadius:"50%",background:tc.color,boxShadow:`0 0 8px ${z.color}`,animation:"pulse 3s ease infinite",animationDelay:`${Math.random()*2}s`}}/>);
+        })}
+        {/* My dot */}
+        {owned&&profile.name&&(
+          <div style={{position:"absolute",left:`${myX}%`,top:`${myY}%`,transform:"translate(-50%,-50%)",zIndex:10}}>
+            <div style={{width:13,height:13,borderRadius:"50%",background:owned.color,boxShadow:`0 0 18px ${owned.color}`,animation:"pulse 2s ease infinite"}}/>
+            <div style={{position:"absolute",top:-22,left:"50%",transform:"translateX(-50%)",fontSize:10,color:owned.color,whiteSpace:"nowrap",background:"rgba(5,3,18,0.9)",padding:"2px 7px",borderRadius:4,border:`1px solid ${owned.color}44`}}>{profile.name}</div>
+          </div>
+        )}
+        {/* Map legend */}
+        <div style={{position:"absolute",bottom:8,right:10,display:"flex",gap:8,flexWrap:"wrap"}}>
+          {PLOT_ZONES.map(z=>(
+            <div key={z.id} style={{display:"flex",alignItems:"center",gap:4}}>
+              <div style={{width:6,height:6,borderRadius:"50%",background:z.color}}/>
+              <span style={{fontSize:9,color:"rgba(180,160,255,0.5)"}}>{zName(z)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Zone detail panel — shown when a ring is clicked */}
+      {selectedZone&&!owned&&(
+        <div style={{...S.card,padding:"20px 22px",marginBottom:16,animation:"fadeUp 0.25s ease",border:`1px solid ${selectedZone.color}44`}}>
+          <div style={{position:"relative",marginBottom:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+              <div style={{width:12,height:12,borderRadius:"50%",background:selectedZone.color,boxShadow:`0 0 12px ${selectedZone.color}`,flexShrink:0}}/>
+              <span style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:20,color:"#e8e0ff"}}>{zName(selectedZone)}</span>
+              <span style={{fontSize:11,color:rarityColor[selectedZone.rarity],background:`${rarityColor[selectedZone.rarity]}18`,padding:"2px 8px",borderRadius:20,border:`1px solid ${rarityColor[selectedZone.rarity]}44`}}>{zRarity(selectedZone)}</span>
+              <button onClick={()=>setSelectedZone(null)} style={{background:"none",border:"none",color:"rgba(180,160,255,0.4)",cursor:"pointer",fontSize:18,marginLeft:"auto"}}>×</button>
+            </div>
+            <p style={{fontSize:12,color:"rgba(180,160,255,0.6)",marginBottom:12,lineHeight:1.7}}>{zDesc(selectedZone)}</p>
+
+            {/* Progress bar */}
+            <div style={{marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"rgba(180,160,255,0.5)",marginBottom:5}}>
+                <span>{tl("plotTotalOwned",lang)} {selectedZone.sold}/{selectedZone.total}</span>
+                <span style={{color:selectedZone.color}}>{tl("plotRemaining",lang)} {selectedZone.total-selectedZone.sold} {tl("plotRemainUnit",lang)}</span>
+              </div>
+              <div style={{height:5,background:"rgba(150,130,255,0.12)",borderRadius:3,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${selectedZone.sold/selectedZone.total*100}%`,background:`linear-gradient(90deg,${selectedZone.color}88,${selectedZone.color})`,borderRadius:3,transition:"width 0.6s ease"}}/>
+              </div>
+            </div>
+
+            {/* Perks */}
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:10,color:selectedZone.color,letterSpacing:2,marginBottom:8}}>✦ {lang==="zh"?"持有特权":"HOLDER PERKS"}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                {zPerks(selectedZone).map((perk,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:"rgba(220,210,255,0.8)"}}>
+                    <span style={{color:selectedZone.color,fontSize:12}}>✓</span>{perk}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Buy button */}
+            {!piUser?(
+              <div style={S.warn}>{tl("plotPiWarn",lang)}</div>
+            ):(
+              <button style={{...S.btn,width:"100%",fontSize:15,background:selectedZone.id==="center"?"linear-gradient(135deg,#b45309,#fbbf24)":selectedZone.id==="star"?"linear-gradient(135deg,#4c1d95,#a78bfa)":selectedZone.id==="garden"?"linear-gradient(135deg,#166534,#4ade80)":undefined}} disabled={buying} onClick={buy}>
+                {buying?tl("plotBuying",lang):`${lang==="zh"?"购买":"Buy"} ${zName(selectedZone)} · ${selectedZone.price}π ✦`}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Owned state */}
+      {owned&&(
+        <div style={{...S.card,padding:"22px",border:`1px solid ${owned.color}44`,animation:"fadeUp 0.3s ease"}}>
+          <div style={{textAlign:"center",marginBottom:18}}>
+            <div style={{fontSize:36,marginBottom:8}}>🏛️</div>
+            <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:20,color:"#e8e0ff",marginBottom:4}}>{tl("plotOwnedTitle",lang)}</div>
+            <div style={{fontSize:14,color:owned.color,marginBottom:6}}>{zName(owned)}</div>
+            <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"6px 14px",background:"rgba(74,222,128,0.08)",border:"1px solid rgba(74,222,128,0.25)",borderRadius:20}}>
+              <div style={{width:5,height:5,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 6px #4ade80"}}/>
+              <span style={{fontSize:11,color:"#4ade80"}}>{tl("plotOwnedOnChain",lang)}</span>
+            </div>
+          </div>
+
+          {/* Perks summary */}
+          <div style={{padding:"12px 14px",background:`${owned.color}0a`,borderRadius:10,border:`1px solid ${owned.color}22`,marginBottom:16}}>
+            <div style={{fontSize:10,color:owned.color,letterSpacing:2,marginBottom:8}}>✦ {lang==="zh"?"你的特权":"YOUR PERKS"}</div>
+            {zPerks(owned).map((p,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:"rgba(220,210,255,0.75)",marginBottom:4}}>
+                <span style={{color:owned.color}}>✓</span>{p}
+              </div>
+            ))}
+          </div>
+
+          {/* Transfer section */}
+          {transferred?(
+            <div style={{textAlign:"center",padding:"14px",background:"rgba(74,222,128,0.08)",borderRadius:12,border:"1px solid rgba(74,222,128,0.2)"}}>
+              <div style={{fontSize:13,color:"#4ade80"}}>✓ {lang==="zh"?"转让成功，地块已转移给":"Transfer complete, plot transferred to"} <strong>{transferName}</strong></div>
+            </div>
+          ):(
+            <div>
+              <div style={{fontSize:12,color:"rgba(180,160,255,0.5)",marginBottom:8}}>{tl("plotTransfer",lang)}</div>
+              <div style={{display:"flex",gap:8}}>
+                <input style={{...S.input,flex:1}} placeholder={tl("plotTransferPh",lang)} value={transferName} onChange={e=>setTransferName(e.target.value)}/>
+                <button style={{...S.ghost,padding:"10px 16px",fontSize:12,flexShrink:0,opacity:transferName.trim()?1:0.4}} disabled={!transferName.trim()||transferring} onClick={doTransfer}>
+                  {transferring?tl("plotTransferring",lang):tl("plotTransferBtn",lang)}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Zone cards list (when nothing selected and not owned) */}
+      {!selectedZone&&!owned&&(
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{fontSize:12,color:"rgba(180,160,255,0.45)",marginBottom:4}}>{lang==="zh"?"👆 点击上方地图的圆环选择区域，或从下方直接选择":"👆 Click a ring on the map above, or choose below"}</div>
+          {PLOT_ZONES.map(zone=>{
+            const rc=rarityColor[zone.rarity]||"#94a3b8";
+            const pct=Math.round(zone.sold/zone.total*100);
+            return(
+              <div key={zone.id} style={{...S.card,padding:"14px 16px",border:`1px solid ${zone.color}22`,cursor:"pointer",transition:"all 0.2s"}} onClick={()=>setSelectedZone(zone)}>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{width:40,height:40,borderRadius:11,background:`${zone.color}18`,border:`1px solid ${zone.color}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <div style={{width:12,height:12,borderRadius:"50%",background:zone.color,boxShadow:`0 0 10px ${zone.color}`}}/>
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                      <span style={{fontSize:13,color:"#e8e0ff"}}>{zName(zone)}</span>
+                      <span style={{fontSize:10,color:rc,background:`${rc}18`,padding:"1px 6px",borderRadius:20}}>{zRarity(zone)}</span>
+                    </div>
+                    <div style={{height:3,background:"rgba(150,130,255,0.1)",borderRadius:2,overflow:"hidden",marginBottom:3}}>
+                      <div style={{height:"100%",width:`${pct}%`,background:zone.color,borderRadius:2}}/>
+                    </div>
+                    <div style={{fontSize:10,color:"rgba(180,160,255,0.4)"}}>{zone.sold}/{zone.total} · {tl("plotRemaining",lang)} {zone.total-zone.sold} {tl("plotRemainUnit",lang)}</div>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontSize:16,color:zone.color,fontFamily:"monospace",fontWeight:"bold"}}>{zone.price}π</div>
+                    <div style={{fontSize:10,color:"rgba(180,160,255,0.4)"}}>{lang==="zh"?"点击查看":"tap to view"}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── 灵魂星球 ──────────────────────────────────────────────────
+function PlanetCanvas({planet,size=180}){
+  const ref=useRef();
+  useEffect(()=>{
+    const c=ref.current;if(!c)return;
+    c.width=size*2;c.height=size*2;
+    const ctx=c.getContext("2d"),cx=size,cy=size,r=size*.72,col=planet.pType.color;
+    let angle=0,id;
+    const draw=()=>{
+      ctx.clearRect(0,0,c.width,c.height);
+      const glow=ctx.createRadialGradient(cx,cy,r*.5,cx,cy,r*1.8);glow.addColorStop(0,col+"33");glow.addColorStop(1,"transparent");ctx.fillStyle=glow;ctx.fillRect(0,0,c.width,c.height);
+      const grad=ctx.createRadialGradient(cx-r*.28,cy-r*.28,r*.04,cx,cy,r);grad.addColorStop(0,"#ffffff33");grad.addColorStop(.25,col+"ee");grad.addColorStop(.7,col+"99");grad.addColorStop(1,col+"22");
+      ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();
+      ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+      for(let i=0;i<6;i++){const y=cy-r+(r*2*(i+.5)/6),bw=r*(.12+.08*Math.sin(i*1.1+angle*.4));ctx.fillStyle=`rgba(255,255,255,${.04+.03*Math.sin(i*1.7+angle)})`;ctx.fillRect(cx-r,y-bw/2,r*2,bw);}
+      const sx=cx+r*.32*Math.cos(angle*.8),sy=cy+r*.18*Math.sin(angle*.6);const sg=ctx.createRadialGradient(sx,sy,0,sx,sy,r*.16);sg.addColorStop(0,"rgba(255,255,255,0.22)");sg.addColorStop(1,"transparent");ctx.fillStyle=sg;ctx.beginPath();ctx.ellipse(sx,sy,r*.16,r*.09,angle*.3,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+      if(planet.pType.ring){ctx.save();ctx.translate(cx,cy);ctx.scale(1,.26);[1.28,1.42,1.56].forEach((rr,i)=>{ctx.beginPath();ctx.arc(0,0,r*rr,0,Math.PI*2);ctx.strokeStyle=col+(i===1?"66":"33");ctx.lineWidth=i===1?9:5;ctx.stroke();});ctx.restore();}
+      const hl=ctx.createRadialGradient(cx-r*.32,cy-r*.32,0,cx-r*.32,cy-r*.32,r*.55);hl.addColorStop(0,"rgba(255,255,255,0.2)");hl.addColorStop(1,"transparent");ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle=hl;ctx.fill();
+      angle+=.007;id=requestAnimationFrame(draw);
+    };
+    id=requestAnimationFrame(draw);return()=>cancelAnimationFrame(id);
+  },[planet,size]);
+  return <canvas ref={ref} style={{width:size,height:size}}/>;
+}
+
+function PlanetPage({profile,piUser,connectPi,payWithPi,lang}){
+  const [phase,setPhase]=useState("intro");
+  const [planet,setPlanet]=useState(null);
+  const [aiDesc,setAiDesc]=useState("");
+  const [minting,setMinting]=useState(false);
+  const [txid,setTxid]=useState(null);
+  const [connecting,setConnecting]=useState(false);
+  const [tick,setTick]=useState(0);
+  useEffect(()=>{if(phase!=="generating")return;const id=setInterval(()=>setTick(t=>t+1),60);return()=>clearInterval(id);},[phase]);
+
+  const generate=async()=>{
+    if(!profile.name||!profile.birth)return;
+    setPhase("generating");setAiDesc("");
+    const p=seedPlanet(profile.name,profile.birth);setPlanet(p);
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:`You are a cosmic poet and astronomer. A soul named "${profile.name}" (born ${profile.birth}) has been assigned a unique planet in the Milky Way. Write a beautiful 3-sentence description in ${lang==="zh"?"Chinese (Simplified)":"English"} connecting this planet to their eternal soul.\n\nPlanet: ${p.pType.zh} (${p.pType.type}), RA ${p.ra}, Dec ${p.dec}, ${p.dist} from Earth, atmosphere: ${p.atmo}, feature: ${p.feature}\n\nPure poetic description only, no labels.`}]})});
+      const data=await res.json();const text=data.content?.[0]?.text||"";
+      for(let i=0;i<text.length;i++){await new Promise(r=>setTimeout(r,20));setAiDesc(d=>d+text[i]);}
+    }catch{
+      const fb=lang==="zh"?`${profile.name}的灵魂在遥远的银河深处找到了归宿——一颗${p.pType.zh}型星球，距地球${p.dist}。它的大气层由${p.atmo}构成，${p.feature}，如同你来过这个世界的痕迹，璀璨而独特。这颗星球将永远铭刻在区块链之上，见证你存在的意义，跨越时空，永不消逝。`:`${profile.name}'s soul has found its home deep in the galaxy — a ${p.pType.type} planet, ${p.dist} from Earth. Its atmosphere of ${p.atmo} cradles ${p.feature}, just like the unique trace you left on this world. This planet is now permanently inscribed on the blockchain, a testament to your existence across time and space.`;
+      for(let i=0;i<fb.length;i++){await new Promise(r=>setTimeout(r,25));setAiDesc(d=>d+fb[i]);}
+    }
+    setPhase("reveal");
+  };
+
+  const mint=async()=>{
+    if(!piUser||!planet)return;setMinting(true);
+    const r=await payWithPi(3,"灵魂星球NFT");
+    if(r.success){setTxid(r.txid);setPhase("minted");}
+    setMinting(false);
+  };
+
+  const pColor=planet?.pType.color||"#7c6fff";
+
+  return(
+    <div style={{...S.section,maxWidth:680}}>
+      <div style={{marginBottom:20}}>
+        <h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:26,color:"#e8e0ff",margin:"0 0 4px"}}>{tl("planetTitle",lang)}</h2>
+        <p style={{fontSize:13,color:"rgba(180,160,255,0.5)",margin:0,lineHeight:1.7}}>{tl("planetSub",lang)}</p>
+      </div>
+
+      {phase==="intro"&&(
+        <div style={{...S.card,padding:"32px 28px",textAlign:"center"}}>
+          <div style={{fontSize:72,marginBottom:16,filter:"drop-shadow(0 0 24px #7c6fff)"}}>🪐</div>
+          <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:22,color:"#e8e0ff",marginBottom:20}}>
+            {lang==="zh"?"你的灵魂，值得一颗星球":"Your Soul Deserves a Planet"}
+          </div>
+          <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:28,flexWrap:"wrap"}}>
+            {[["🤖",lang==="zh"?"Claude AI 分配":"Claude AI","坐标精确定位"],["π",lang==="zh"?"Pi 真人验证":"Pi Verified",lang==="zh"?"唯一性保障":"1 planet per human"],["⛓️",lang==="zh"?"区块链永久":"Blockchain","永不更改，可转让"]].map(([e,t,d])=>(
+              <div key={t} style={{...S.card,padding:"14px 12px",textAlign:"center",minWidth:120,flex:1}}>
+                <div style={{fontSize:24,marginBottom:6}}>{e}</div>
+                <div style={{fontSize:12,color:"#e8e0ff",marginBottom:3}}>{t}</div>
+                <div style={{fontSize:10,color:"rgba(180,160,255,0.5)"}}>{d}</div>
+              </div>
+            ))}
+          </div>
+          {!profile.name&&<div style={{fontSize:13,color:"rgba(251,191,36,0.7)",marginBottom:16}}>{lang==="zh"?"⚠️ 请先在「我的灵魂」创建档案":"⚠️ Create your soul profile first"}</div>}
+          {!piUser?(
+            <div>
+              <div style={{fontSize:12,color:"rgba(180,160,255,0.5)",marginBottom:14}}>{tl("planetPiWarn",lang)}</div>
+              <button style={{...S.btn,padding:"14px 36px",fontSize:15}} onClick={async()=>{setConnecting(true);await connectPi();setConnecting(false);}}>
+                {connecting?"…":tl("connectPiBtn",lang)}
+              </button>
+            </div>
+          ):(
+            <button style={{...S.btn,padding:"14px 36px",fontSize:15,opacity:profile.name&&profile.birth?1:.5,background:"linear-gradient(135deg,#4c1d95,#7c3aed,#a855f7)"}} disabled={!profile.name||!profile.birth} onClick={generate}>
+              {tl("planetGenerate",lang)}
+            </button>
+          )}
+        </div>
+      )}
+
+      {phase==="generating"&&(
+        <div style={{...S.card,padding:"48px 28px",textAlign:"center"}}>
+          <div style={{fontSize:64,marginBottom:20,animation:"pulse 1.4s ease infinite"}}>🔭</div>
+          <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:18,color:"#e8e0ff",marginBottom:8}}>{tl("planetGenerating",lang)}</div>
+          <div style={{fontSize:13,color:"rgba(180,160,255,0.5)",marginBottom:28}}>
+            {lang==="zh"?`正在扫描银河系 ${(Math.abs(Math.sin(tick*.15))*9999+1000).toFixed(0)} 个星系`:`Scanning ${(Math.abs(Math.sin(tick*.15))*9999+1000).toFixed(0)} star systems…`}
+          </div>
+          <div style={{position:"relative",height:4,background:"rgba(150,130,255,0.12)",borderRadius:2,overflow:"hidden",maxWidth:360,margin:"0 auto"}}>
+            <div style={{position:"absolute",top:0,bottom:0,width:"40%",background:"linear-gradient(90deg,transparent,#a855f7,transparent)",animation:"scanLine 1.4s ease-in-out infinite",borderRadius:2}}/>
+          </div>
+        </div>
+      )}
+
+      {(phase==="reveal"||phase==="minted")&&planet&&(
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{...S.card,padding:"26px 22px",border:`1px solid ${pColor}44`,position:"relative",overflow:"hidden"}}>
+            <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${pColor},transparent)`}}/>
+            <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at 25% 50%,${pColor}10,transparent 65%)`}}/>
+            <div style={{position:"relative",display:"flex",gap:22,alignItems:"center",flexWrap:"wrap"}}>
+              <div style={{flexShrink:0}}><PlanetCanvas planet={planet} size={145}/></div>
+              <div style={{flex:1,minWidth:200}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+                  <span style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:22,color:"#e8e0ff"}}>{profile.name}</span>
+                  <span style={{fontSize:12,color:pColor,background:`${pColor}18`,padding:"2px 9px",borderRadius:20,border:`1px solid ${pColor}44`}}>{planet.pType.emoji} {lang==="zh"?planet.pType.zh:planet.pType.type}</span>
+                </div>
+                <div style={{fontSize:10,color:"rgba(180,160,255,0.4)",fontFamily:"monospace",marginBottom:14}}>{planet.planetId}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                  {[["RA",planet.ra],["Dec",planet.dec],[lang==="zh"?"距离":"Dist",planet.dist],[lang==="zh"?"半径":"Radius",planet.radius],[tl("planetAtmo",lang),planet.atmo],[lang==="zh"?"公转周期":"Period",planet.period]].map(([k,v])=>(
+                    <div key={k} style={{background:"rgba(255,255,255,0.03)",borderRadius:8,padding:"7px 9px",border:"1px solid rgba(150,130,255,0.1)"}}>
+                      <div style={{fontSize:9,color:"rgba(180,160,255,0.4)",letterSpacing:1,marginBottom:2}}>{k}</div>
+                      <div style={{fontSize:10,color:"#c8b8ff",fontFamily:"monospace",wordBreak:"break-all"}}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{...S.card,padding:"16px 20px",border:`1px solid ${pColor}22`}}>
+            <div style={{fontSize:10,color:pColor,letterSpacing:2,marginBottom:7}}>{tl("planetFeature",lang).toUpperCase()}</div>
+            <div style={{fontSize:13,color:"rgba(220,210,255,0.85)",lineHeight:1.8}}>{planet.feature}</div>
+          </div>
+          {aiDesc&&(
+            <div style={{...S.card,padding:"20px 22px",background:"rgba(91,63,255,0.06)",border:"1px solid rgba(150,130,255,0.22)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                <span style={{fontSize:14}}>🤖</span>
+                <span style={{fontSize:10,color:"rgba(180,160,255,0.5)",letterSpacing:2}}>CLAUDE AI · {lang==="zh"?"星球解读":"PLANET READING"}</span>
+              </div>
+              <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:15,color:"rgba(225,215,255,0.92)",lineHeight:2.1}}>{aiDesc}</div>
+            </div>
+          )}
+          <div style={{...S.card,padding:"14px 18px",display:"flex",alignItems:"center",gap:12}}>
+            <div style={{fontSize:22}}>π</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,color:"#e8e0ff"}}>{tl("planetUnique",lang)}</div>
+              <div style={{fontSize:11,color:"rgba(180,160,255,0.5)"}}>{piUser?.username} · {lang==="zh"?"真人身份已验证":"Real human verified"}</div>
+            </div>
+            <div style={{width:8,height:8,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 10px #4ade80",animation:"pulse 2s ease infinite"}}/>
+          </div>
+          {phase==="minted"?(
+            <div style={{...S.card,padding:"22px",textAlign:"center",border:`1px solid ${pColor}55`}}>
+              <div style={{fontSize:40,marginBottom:10}}>🎉</div>
+              <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:20,color:"#e8e0ff",marginBottom:6}}>{tl("planetMinted",lang)}</div>
+              <div style={{fontSize:12,color:"rgba(180,160,255,0.5)",marginBottom:16}}>{lang==="zh"?"已永久写入 Pi Network 区块链":"Permanently written to Pi Network blockchain"}</div>
+              <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+                {[["Pi Network","#a78bfa"],["IPFS","#38bdf8"],["NFT","#f472b6"]].map(([label,col])=>(
+                  <div key={label} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",background:`${col}12`,border:`1px solid ${col}44`,borderRadius:20}}>
+                    <div style={{width:5,height:5,borderRadius:"50%",background:col,boxShadow:`0 0 6px ${col}`}}/>
+                    <span style={{fontSize:11,color:col}}>{label}</span>
+                  </div>
+                ))}
+              </div>
+              {txid&&<div style={{marginTop:14,padding:"8px 12px",background:"rgba(100,80,200,0.1)",borderRadius:8,fontSize:11,color:"rgba(180,160,255,0.55)",fontFamily:"monospace",wordBreak:"break-all"}}>TX: {txid}</div>}
+            </div>
+          ):(
+            <div style={{display:"flex",gap:10}}>
+              <button style={{...S.ghost,flex:1}} onClick={()=>{setPhase("intro");setAiDesc("");setPlanet(null);}}>{lang==="zh"?"重新生成":"Regenerate"}</button>
+              <button style={{...S.btn,flex:2,background:"linear-gradient(135deg,#4c1d95,#7c3aed,#a855f7)",opacity:piUser?1:.5}} disabled={!piUser||minting} onClick={mint}>
+                {minting?tl("planetMinting",lang):tl("planetMint",lang)}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LegacyPage({profile,piUser,payWithPi,lang}){
+  const [wills,setWills]=useState([{id:1,heir:"林间听风",amount:5,condition:"我的灵魂离开10年后",locked:true,created:"2024-01-15"}]);
+  const [creating,setCreating]=useState(false);const [form,setForm]=useState({heir:"",amount:"",condition:""});const [paying,setPaying]=useState(false);
+  const create=async()=>{
+    if(!form.heir||!form.amount||!form.condition)return;setPaying(true);
+    const r=await payWithPi(parseFloat(form.amount)+.1,"灵魂遗产");
+    if(r.success){setWills(w=>[...w,{id:Date.now(),...form,locked:true,created:new Date().toISOString().slice(0,10)}]);setForm({heir:"",amount:"",condition:""});setCreating(false);}
+    setPaying(false);
+  };
+  return(
+    <div style={S.section}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+        <div><h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:26,color:"#e8e0ff",margin:"0 0 4px"}}>{tl("legacyTitle",lang)}</h2><p style={{fontSize:13,color:"rgba(180,160,255,0.5)",margin:0}}>{tl("legacySub",lang)}</p></div>
+        <button style={S.btn} onClick={()=>setCreating(true)}>{tl("legacyCreate",lang)}</button>
+      </div>
+      <div style={{...S.card,padding:"16px 20px",marginBottom:18,display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}>
+        {[[tl("legacyH1",lang),tl("legacyH1d",lang)],[tl("legacyH2",lang),tl("legacyH2d",lang)],[tl("legacyH3",lang),tl("legacyH3d",lang)]].map(([h,d])=>(
+          <div key={h} style={{textAlign:"center"}}>
+            <div style={{fontSize:22,marginBottom:5}}>{h.slice(0,2)}</div>
+            <div style={{fontSize:12,color:"#e8e0ff",marginBottom:3}}>{h.slice(2)}</div>
+            <div style={{fontSize:10,color:"rgba(180,160,255,0.45)",lineHeight:1.6}}>{d}</div>
+          </div>
+        ))}
+      </div>
+      {creating&&(
+        <div style={{...S.card,padding:"22px",marginBottom:18,animation:"fadeUp 0.3s ease"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+            <span style={{fontSize:15,color:"#e8e0ff"}}>{tl("legacyFormTitle",lang)}</span>
+            <button onClick={()=>setCreating(false)} style={{background:"none",border:"none",color:"rgba(180,160,255,0.4)",cursor:"pointer",fontSize:18}}>×</button>
+          </div>
+          {[[tl("legacyHeirLabel",lang),"text","heir",tl("legacyHeirPh",lang)],[tl("legacyAmountLabel",lang),"number","amount",tl("legacyAmountPh",lang)],[tl("legacyCondLabel",lang),"text","condition",tl("legacyCondPh",lang)]].map(([label,type,key,ph])=>(
+            <div key={key} style={{marginBottom:13}}><label style={S.label}>{label}</label><input style={S.input} type={type} placeholder={ph} value={form[key]} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))}/></div>
+          ))}
+          <div style={{padding:"11px 14px",background:"rgba(251,191,36,0.06)",border:"1px solid rgba(251,191,36,0.2)",borderRadius:10,marginBottom:14}}>
+            <div style={{fontSize:11,color:"rgba(251,191,36,0.8)",lineHeight:1.8}}>{tl("legacyWarnText",lang)}</div>
+          </div>
+          <button style={{...S.btn,width:"100%",opacity:form.heir&&form.amount&&form.condition&&piUser?1:.4}} disabled={!form.heir||!form.amount||!form.condition||!piUser||paying} onClick={create}>
+            {paying?tl("legacySealing",lang):`${tl("legacySeal",lang)} · ${parseFloat(form.amount||0)+.1}π`}
+          </button>
+          {!piUser&&<div style={S.warn}>{tl("legacyPiWarn",lang)}</div>}
+        </div>
+      )}
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {wills.map(w=>(
+          <div key={w.id} style={{...S.card,padding:"18px 22px"}}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+              <div style={{fontSize:26}}>📜</div>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
+                  <span style={{fontSize:14,color:"#e8e0ff"}}>{tl("legacyGiveTo",lang)} {w.heir}</span>
+                  <span style={{fontSize:14,color:"#a898ff",fontFamily:"monospace"}}>{w.amount}π</span>
+                  <span style={{fontSize:10,background:"rgba(100,80,200,0.2)",color:"#a898ff",padding:"2px 8px",borderRadius:20}}>{tl("legacyOnChain",lang)}</span>
+                </div>
+                <div style={{fontSize:12,color:"rgba(180,160,255,0.5)",marginBottom:3}}>{tl("legacyCondPrefix",lang)} {w.condition}</div>
+                <div style={{fontSize:10,color:"rgba(180,160,255,0.35)"}}>{tl("legacyCreatedPrefix",lang)} {w.created}</div>
+              </div>
+              <div style={{width:7,height:7,borderRadius:"50%",background:"#fbbf24",boxShadow:"0 0 8px #fbbf24",marginTop:6,animation:"pulse 3s ease infinite"}}/>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VoicePage({profile,piUser,payWithPi,lang}){
+  const [recording,setRecording]=useState(false);const [recorded,setRecorded]=useState(false);const [duration,setDuration]=useState(0);
+  const [uploading,setUploading]=useState(false);const [uploaded,setUploaded]=useState(false);const [playing,setPlaying]=useState(null);const [tick,setTick]=useState(0);
+  const timerRef=useRef();
+  useEffect(()=>{let t2;if(recording){timerRef.current=setInterval(()=>setDuration(d=>d+1),1000);t2=setInterval(()=>setTick(x=>x+1),150);}return()=>{clearInterval(timerRef.current);clearInterval(t2);};},[recording]);
+  const startRec=()=>{setRecording(true);setDuration(0);setTick(0);};
+  const stopRec=()=>{setRecording(false);setRecorded(true);clearInterval(timerRef.current);};
+  const upload=async()=>{setUploading(true);const r=await payWithPi(.5,"灵魂之声");if(r.success){await new Promise(x=>setTimeout(x,1500));setUploaded(true);}setUploading(false);};
+  const fmt=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+  const vLabel=v=>lang==="zh"?v.zh:v.en;
+  return(
+    <div style={S.section}>
+      <div style={{marginBottom:20}}>
+        <h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:26,color:"#e8e0ff",margin:"0 0 4px"}}>{tl("voiceTitle",lang)}</h2>
+        <p style={{fontSize:13,color:"rgba(180,160,255,0.5)",margin:0}}>{tl("voiceSub",lang)}</p>
+      </div>
+      <div style={{...S.card,padding:"32px 24px",marginBottom:18,textAlign:"center"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3,height:52,marginBottom:22}}>
+          {Array.from({length:28}).map((_,i)=>{const h=recording?12+Math.abs(Math.sin(tick*.3+i*.7)*22):4+Math.sin(i*.8)*6;return <div key={i} style={{width:3,borderRadius:2,background:recording?"#7c6fff":"rgba(150,130,255,0.2)",height:`${h}px`,transition:recording?"height 0.15s":"height 0.4s"}}/>;
+          })}
+        </div>
+        {uploaded?(
+          <div>
+            <div style={{fontSize:40,marginBottom:10}}>🎵</div>
+            <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:20,color:"#e8e0ff",marginBottom:6}}>{tl("voiceSealedTitle",lang)}</div>
+            <div style={{fontSize:12,color:"rgba(180,160,255,0.5)",marginBottom:16}}>{fmt(duration)} · {tl("voiceSealedDesc",lang)}</div>
+            <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"7px 16px",background:"rgba(74,222,128,0.08)",border:"1px solid rgba(74,222,128,0.25)",borderRadius:20}}>
+              <div style={{width:5,height:5,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 6px #4ade80"}}/>
+              <span style={{fontSize:11,color:"#4ade80"}}>{tl("voiceOnChain",lang)}</span>
+            </div>
+          </div>
+        ):recorded?(
+          <div>
+            <div style={{fontSize:12,color:"rgba(180,160,255,0.6)",marginBottom:8}}>{fmt(duration)}</div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18,padding:"10px 16px",background:"rgba(100,80,200,0.1)",borderRadius:10,border:"1px solid rgba(150,130,255,0.15)",justifyContent:"center"}}>
+              <span style={{fontSize:16}}>▶</span>
+              <div style={{flex:1,maxWidth:160,height:3,background:"rgba(150,130,255,0.2)",borderRadius:2}}><div style={{width:"55%",height:"100%",background:"#7c6fff",borderRadius:2}}/></div>
+              <span style={{fontSize:11,color:"rgba(180,160,255,0.5)"}}>{fmt(duration)}</span>
+            </div>
+            <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+              <button style={S.ghost} onClick={()=>{setRecorded(false);setDuration(0);}}>{tl("voiceRedo",lang)}</button>
+              <button style={{...S.btn,opacity:piUser?1:.5}} disabled={!piUser||uploading} onClick={upload}>{uploading?tl("voiceSealing",lang):tl("voiceSeal",lang)}</button>
+            </div>
+            {!piUser&&<div style={S.warn}>{tl("voicePiWarn",lang)}</div>}
+          </div>
+        ):recording?(
+          <div>
+            <div style={{fontSize:13,color:"#ff6b6b",marginBottom:16,animation:"pulse 1s ease infinite"}}>{tl("voiceRecording",lang)} {fmt(duration)}</div>
+            <button style={{...S.btn,background:"linear-gradient(135deg,#dc2626,#ef4444)",padding:"13px 36px"}} onClick={stopRec}>{tl("voiceStop",lang)}</button>
+          </div>
+        ):(
+          <div>
+            <div style={{fontSize:13,color:"rgba(180,160,255,0.5)",marginBottom:16}}>{tl("voicePrompt",lang)}</div>
+            <button style={{...S.btn,padding:"13px 36px",fontSize:15}} onClick={startRec}>{tl("voiceStart",lang)}</button>
+          </div>
+        )}
+      </div>
+      <div>
+        <div style={{fontSize:11,color:"rgba(180,160,255,0.4)",letterSpacing:2,marginBottom:12}}>{tl("voiceOthers",lang)}</div>
+        <div style={{display:"flex",flexDirection:"column",gap:11}}>
+          {SAMPLE_VOICES.map(v=>{const tc=THEME_CONFIG[v.theme];return(
+            <div key={v.id} style={{...S.card,padding:"14px 18px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:38,height:38,borderRadius:"50%",background:`${tc.color}18`,border:`1px solid ${tc.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{tc.emoji}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,color:"#e8e0ff",marginBottom:2}}>{v.name}</div>
+                  <div style={{fontSize:10,color:"rgba(180,160,255,0.45)"}}>{vLabel(v)} · {v.date}</div>
+                </div>
+                <button onClick={()=>setPlaying(playing===v.id?null:v.id)} style={{...S.ghost,padding:"7px 14px",fontSize:12,flexShrink:0,background:playing===v.id?"rgba(100,80,200,0.3)":undefined}}>
+                  {playing===v.id?`⏸ ${v.dur}`:`▶ ${v.dur}`}
+                </button>
+              </div>
+              {playing===v.id&&<div style={{marginTop:10,height:3,background:"rgba(150,130,255,0.12)",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",background:`linear-gradient(90deg,${tc.color},${tc.color}88)`,animation:"playProgress 10s linear forwards",borderRadius:2}}/></div>}
+            </div>
+          );})}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SoulHaven(){
+  const [page,setPage]=useState("home");
+  const [lang,setLang]=useState("zh");
+  const [profile,setProfile]=useState({name:"",birth:"",theme:"cosmos",epitaph:"",nft:false});
+  const {piUser,connectPi,payWithPi,piLoading,piError}=usePiNetwork();
+
+  // Inject Pi foundational SDK — must be in <head> before auth runs
+  useEffect(()=>{
+    if(document.querySelector('script[src*="pi-sdk"]'))return;
+    const s=document.createElement("script");
+    s.src="https://sdk.minepi.com/pi-sdk.js";
+    s.async=true;
+    document.head.insertBefore(s,document.head.firstChild);
+  },[]);
+
+  useEffect(()=>{
+    const link=document.createElement("link");link.rel="stylesheet";link.href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;400;500&display=swap";
+    document.head.appendChild(link);return()=>{try{document.head.removeChild(link);}catch{}};
+  },[]);
+  return(
+    <div style={{fontFamily:"'Noto Serif SC',serif",minHeight:"100vh",background:"#050312",color:"#e8e0ff",paddingTop:52}}>
+      <style>{`
+        *{box-sizing:border-box;margin:0;padding:0}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.4)}}
+        @keyframes glow{0%,100%{text-shadow:0 0 20px rgba(150,130,255,0.3)}50%{text-shadow:0 0 60px rgba(150,130,255,0.7)}}
+        @keyframes floatUp{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(0,-70px)}}
+        @keyframes playProgress{from{width:0}to{width:100%}}
+        @keyframes scanLine{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+        input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.7)}
+        input:focus,textarea:focus{border-color:rgba(150,130,255,0.5)!important;outline:none}
+        button:hover{opacity:.9;transform:translateY(-1px)}
+        ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:rgba(150,130,255,0.2);border-radius:2px}
+      `}</style>
+      <StarField/>
+      <Nav page={page} setPage={setPage} piUser={piUser} onConnect={connectPi} piLoading={piLoading} piError={piError} lang={lang} setLang={setLang}/>
+      {page==="home"    &&<HomePage    profile={profile} setProfile={setProfile} piUser={piUser} connectPi={connectPi} payWithPi={payWithPi} lang={lang}/>}
+      {page==="map"     &&<MapPage     lang={lang}/>}
+      {page==="ritual"  &&<RitualPage  profile={profile} lang={lang}/>}
+      {page==="board"   &&<BoardPage   profile={profile} lang={lang}/>}
+      {page==="capsule" &&<CapsulePage profile={profile} piUser={piUser} payWithPi={payWithPi} lang={lang}/>}
+      {page==="planet"  &&<PlanetPage  profile={profile} piUser={piUser} connectPi={connectPi} payWithPi={payWithPi} lang={lang}/>}
+      {page==="plot"    &&<PlotPage    profile={profile} piUser={piUser} payWithPi={payWithPi} lang={lang}/>}
+      {page==="legacy"  &&<LegacyPage  profile={profile} piUser={piUser} payWithPi={payWithPi} lang={lang}/>}
+      {page==="voice"   &&<VoicePage   profile={profile} piUser={piUser} payWithPi={payWithPi} lang={lang}/>}
+      <MusicPlayer lang={lang}/>
+    </div>
+  );
+}
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<SoulHaven/>);
+  </script>
+</body>
+</html>
