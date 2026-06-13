@@ -967,18 +967,26 @@ function Nav({page,setPage,piUser,onConnect,piLoading,piError,lang,setLang}){
 function HomePage({profile,setProfile,piUser,connectPi,payWithPi,lang}){
   const [step,setStep]=useState(profile.name?"card":"landing");
   const [mintStatus,setMintStatus]=useState(null);
+  const [showNFTSuccess, setShowNFTSuccess] = useState(false);
+  const [currentTxid, setCurrentTxid] = useState(null);
   const [connecting,setConnecting]=useState(false);
+
   const handleMint=async()=>{
     setMintStatus("paying");
-    // Sandbox timeout: if payment doesn't complete in 30s, show error
     const payPromise = payWithPi(1,"Soul NFT");
-    const timeoutPromise = new Promise(res=>setTimeout(()=>res({success:false,reason:"timeout"}),30000));
+    const timeoutPromise = new Promise(res=>setTimeout(()=>res({success:false,reason:"timeout"}),60000));
     const r = await Promise.race([payPromise, timeoutPromise]);
+    
     if(r.success){
       setMintStatus("minting");
-      await new Promise(x=>setTimeout(x,2000));
-      setProfile(p=>({...p,nft:true,txid:r.txid}));
+      await new Promise(x=>setTimeout(x,1600));
+      
+      const newProfile = {...profile, nft:true, txid:r.txid};
+      setProfile(newProfile);
       setMintStatus("done");
+      
+      setCurrentTxid(r.txid);
+      setShowNFTSuccess(true);   // 弹出成功弹窗
     } else {
       setMintStatus(null);
       if(r.reason==="timeout"){
@@ -986,6 +994,36 @@ function HomePage({profile,setProfile,piUser,connectPi,payWithPi,lang}){
       }
     }
   };
+
+  // NFT Success Modal
+  const NFTSuccessModal = ({onClose}) => (
+    <div style={{
+      position:"fixed", inset:0, background:"rgba(5,3,18,0.96)", zIndex:2000,
+      display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(12px)"
+    }}>
+      <div style={{...S.card, maxWidth:460, padding:"40px 30px", textAlign:"center"}}>
+        <div style={{fontSize:72, marginBottom:20}}>✦</div>
+        <h2 style={{fontFamily:"'Ma Shan Zheng',serif", fontSize:32, color:"#e8e0ff"}}>
+          {tl("nftSuccessTitle", lang)}
+        </h2>
+        <p style={{fontSize:15, lineHeight:1.8, color:"rgba(220,210,255,0.9)", margin:"16px 0 24px", whiteSpace:"pre-line"}}>
+          {tl("nftSuccessDesc", lang)}
+        </p >
+
+        {currentTxid && (
+          <a href= "_blank" rel="noopener noreferrer"
+            style={{display:"block", padding:"14px", background:"rgba(100,80,200,0.15)", borderRadius:12, color:"#7c6fff", textDecoration:"none", marginBottom:24, fontSize:13}}>
+            🔍 {tl("txExplorer", lang)} → {currentTxid.slice(0,12)}...
+          </a >
+        )}
+
+        <button onClick={onClose} style={{...S.btn, width:"100%"}}>
+          {lang==="zh" ? "好的，我知道了 ✦" : "Got it ✦"}
+        </button>
+      </div>
+    </div>
+  );
+
   const days=profile.birth?calcDays(profile.birth):0;
   const tc=THEME_CONFIG[profile.theme]||THEME_CONFIG.cosmos;
 
@@ -993,7 +1031,7 @@ function HomePage({profile,setProfile,piUser,connectPi,payWithPi,lang}){
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"calc(100vh - 52px)",padding:"40px 24px",textAlign:"center",position:"relative",zIndex:2}}>
       <div style={{fontSize:11,letterSpacing:5,color:"rgba(180,160,255,0.4)",marginBottom:12,animation:"fadeUp 1s ease both"}}>SOUL HAVEN · PI NETWORK</div>
       <h1 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:"clamp(44px,10vw,72px)",fontWeight:400,margin:"0 0 20px",background:"linear-gradient(135deg,#c8b8ff,#e8d8ff,#a898ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"fadeUp 1s 0.2s ease both,glow 4s 1s ease infinite"}}>{tl("tagline",lang)}</h1>
-      <p style={{fontSize:15,color:"rgba(200,190,255,0.6)",lineHeight:2.1,maxWidth:300,margin:"0 0 44px",animation:"fadeUp 1s 0.4s ease both",whiteSpace:"pre-line"}}>{tl("sub",lang)}</p>
+      <p style={{fontSize:15,color:"rgba(200,190,255,0.6)",lineHeight:2.1,maxWidth:300,margin:"0 0 44px",animation:"fadeUp 1s 0.4s ease both",whiteSpace:"pre-line"}}>{tl("sub",lang)}</p >
       <button style={{...S.btn,fontSize:16,padding:"16px 40px",animation:"fadeUp 1s 0.6s ease both"}} onClick={()=>setStep("form")}>{tl("cta",lang)}</button>
       <div style={{marginTop:40,fontSize:11,color:"rgba(150,130,255,0.3)",letterSpacing:3,animation:"fadeUp 1s 0.8s ease both"}}>{tl("eternal",lang)}</div>
     </div>
@@ -1042,7 +1080,7 @@ function HomePage({profile,setProfile,piUser,connectPi,payWithPi,lang}){
           <div style={{fontSize:11,color:tc.color,letterSpacing:4,marginTop:4}}>SOUL · {tc[lang]||tc.en}</div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:18}}>
-          {[[tl("born",lang),profile.birth],[tl("soulAge",lang),`${(days/365.25).toFixed(1)} ${tl("yearsOld",lang)}`],[tl("walkedDays",lang),`${days.toLocaleString()}${tl("daysSuffix",lang)}`],[tl("dest",lang),tc[lang]||tc.en]].map(([k,v])=>(
+          {[[tl("born",lang),profile.birth],[tl("soulAge",lang),`${(days/365.25).toFixed(1)} \( {tl("yearsOld",lang)}`],[tl("walkedDays",lang),` \){days.toLocaleString()}${tl("daysSuffix",lang)}`],[tl("dest",lang),tc[lang]||tc.en]].map(([k,v])=>(
             <div key={k} style={{background:"rgba(255,255,255,0.04)",borderRadius:10,padding:"11px 13px",border:"1px solid rgba(150,130,255,0.12)"}}>
               <div style={{fontSize:10,color:"rgba(180,160,255,0.45)",letterSpacing:2,marginBottom:4}}>{k}</div>
               <div style={{fontSize:13,color:"#d4c8ff"}}>{v}</div>
@@ -1050,11 +1088,20 @@ function HomePage({profile,setProfile,piUser,connectPi,payWithPi,lang}){
           ))}
         </div>
         {profile.epitaph&&<div style={{borderTop:"1px solid rgba(150,130,255,0.12)",paddingTop:14,marginBottom:14,fontSize:13,color:"rgba(220,210,255,0.8)",fontStyle:"italic",lineHeight:1.9}}>"{profile.epitaph}"</div>}
-        <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(100,80,200,0.1)",borderRadius:8,padding:"9px 12px",border:"1px solid rgba(120,100,255,0.18)"}}>
-          <div style={{width:5,height:5,borderRadius:"50%",background:profile.nft?"#4ade80":tc.color,boxShadow:`0 0 8px ${profile.nft?"#4ade80":tc.color}`,animation:"pulse 2s ease infinite"}}/>
-          <span style={{fontSize:11,color:"rgba(180,160,255,0.65)",letterSpacing:1}}>{profile.nft?`${tl("nftMintedLabel",lang)} · TX: ${(profile.txid||"").slice(0,12)}…`:`${tl("onChain",lang)} · ${soulId(profile.name)}`}</span>
+        <div style={{background:"rgba(100,80,200,0.1)",borderRadius:8,padding:"9px 12px",border:"1px solid rgba(120,100,255,0.18)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:profile.nft&&profile.txid?5:0}}>
+            <div style={{width:5,height:5,borderRadius:"50%",background:profile.nft?"#4ade80":tc.color,boxShadow:`0 0 8px ${profile.nft?"#4ade80":tc.color}`,animation:"pulse 2s ease infinite",flexShrink:0}}/>
+            <span style={{fontSize:11,color:"rgba(180,160,255,0.65)",letterSpacing:1}}>{profile.nft?`${tl("nftMintedLabel",lang)} · TX: \( {(profile.txid||"").slice(0,12)}…`:` \){tl("onChain",lang)} · ${soulId(profile.name)}`}</span>
+          </div>
+          {profile.nft&&profile.txid&&(
+            <a href={`https://blockexplorer.minepi.com/tx/${profile.txid}`} target="_blank" rel="noopener noreferrer"
+              style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:"#7c6fff",textDecoration:"none",paddingLeft:13,marginTop:2}}>
+              🔍 {tl("txExplorer",lang)} ↗
+            </a >
+          )}
         </div>
       </div>
+
       {!profile.nft&&(
         <div style={{...S.card,padding:"18px 22px",marginBottom:14,display:"flex",alignItems:"center",gap:14}}>
           <div style={{fontSize:28}}>🔮</div>
@@ -1067,6 +1114,7 @@ function HomePage({profile,setProfile,piUser,connectPi,payWithPi,lang}){
           </button>
         </div>
       )}
+
       {!piUser&&(
         <div style={{...S.card,padding:"16px 22px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onClick={async()=>{setConnecting(true);await connectPi();setConnecting(false);}}>
           <div style={{fontSize:24}}>π</div>
@@ -1077,6 +1125,22 @@ function HomePage({profile,setProfile,piUser,connectPi,payWithPi,lang}){
           <div style={{fontSize:13,color:"rgba(180,160,255,0.4)"}}>{connecting?"…":"→"}</div>
         </div>
       )}
+
+      {piUser&&(
+        <div style={{...S.card,padding:"14px 18px",display:"flex",alignItems:"center",gap:12}}>
+          <div style={{fontSize:20}}>🔍</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,color:"#e8e0ff",marginBottom:2}}>{lang==="zh"?"查看我的 Pi 交易记录":"View My Pi Transactions"}</div>
+            <div style={{fontSize:10,color:"rgba(180,160,255,0.45)"}}>{lang==="zh"?"在区块链浏览器查看所有支付记录":"View all payments on block explorer"}</div>
+          </div>
+          <a href={`https://blockexplorer.minepi.com/accounts/${piUser.uid}`} target="_blank" rel="noopener noreferrer"
+            style={{fontSize:12,color:"#7c6fff",textDecoration:"none",flexShrink:0}}>
+            查看 ↗
+          </a >
+        </div>
+      )}
+
+      {showNFTSuccess && <NFTSuccessModal onClose={() => setShowNFTSuccess(false)} />}
     </div>
   );
 }
