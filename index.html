@@ -964,183 +964,130 @@ function Nav({page,setPage,piUser,onConnect,piLoading,piError,lang,setLang}){
   );
 }
 
-function HomePage({profile,setProfile,piUser,connectPi,payWithPi,lang}){
-  const [step,setStep]=useState(profile.name?"card":"landing");
-  const [mintStatus,setMintStatus]=useState(null);
+function HomePage({profile, setProfile, piUser, connectPi, payWithPi, lang}) {
+  const [step, setStep] = useState(profile.name ? "card" : "landing");
+  const [mintStatus, setMintStatus] = useState(null);
   const [showNFTSuccess, setShowNFTSuccess] = useState(false);
   const [currentTxid, setCurrentTxid] = useState(null);
-  const [connecting,setConnecting]=useState(false);
+  const [connecting, setConnecting] = useState(false);
 
-  const handleMint=async()=>{
+  const handleMint = async () => {
     setMintStatus("paying");
-    const payPromise = payWithPi(1,"Soul NFT");
-    const timeoutPromise = new Promise(res=>setTimeout(()=>res({success:false,reason:"timeout"}),60000));
-    const r = await Promise.race([payPromise, timeoutPromise]);
+    const r = await payWithPi(1, "Soul NFT");
     
-    if(r.success){
+    if (r.success) {
       setMintStatus("minting");
-      await new Promise(x=>setTimeout(x,1600));
+      await new Promise(x => setTimeout(x, 1500));
       
-      const newProfile = {...profile, nft:true, txid:r.txid};
-      setProfile(newProfile);
+      setProfile(p => ({ ...p, nft: true, txid: r.txid }));
       setMintStatus("done");
-      
       setCurrentTxid(r.txid);
-      setShowNFTSuccess(true);   // 弹出成功弹窗
+      setShowNFTSuccess(true);
     } else {
       setMintStatus(null);
-      if(r.reason==="timeout"){
-        alert(lang==="zh"?"支付超时，请确认 PI_API_KEY 已在 Netlify 配置":"Payment timeout — check PI_API_KEY in Netlify settings");
-      }
     }
   };
 
-  // NFT Success Modal
-  const NFTSuccessModal = ({onClose}) => (
+  // NFT 成功弹窗
+  const NFTSuccessModal = () => (
     <div style={{
-      position:"fixed", inset:0, background:"rgba(5,3,18,0.96)", zIndex:2000,
-      display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(12px)"
+      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+      background: "rgba(5,3,18,0.95)", zIndex: 9999,
+      display: "flex", alignItems: "center", justifyContent: "center"
     }}>
-      <div style={{...S.card, maxWidth:460, padding:"40px 30px", textAlign:"center"}}>
-        <div style={{fontSize:72, marginBottom:20}}>✦</div>
-        <h2 style={{fontFamily:"'Ma Shan Zheng',serif", fontSize:32, color:"#e8e0ff"}}>
-          {tl("nftSuccessTitle", lang)}
+      <div style={{...S.card, maxWidth: 420, padding: "40px 28px", textAlign: "center"}}>
+        <div style={{fontSize: 70, marginBottom: 16}}>✦</div>
+        <h2 style={{fontFamily: "'Ma Shan Zheng', serif", fontSize: 28, color: "#e8e0ff", marginBottom: 12}}>
+          铸造成功！
         </h2>
-        <p style={{fontSize:15, lineHeight:1.8, color:"rgba(220,210,255,0.9)", margin:"16px 0 24px", whiteSpace:"pre-line"}}>
-          {tl("nftSuccessDesc", lang)}
+        <p style={{fontSize: 15, lineHeight: 1.7, color: "rgba(220,210,255,0.85)", marginBottom: 24}}>
+          你的灵魂已永久存在于区块链之上
         </p >
-
+        
         {currentTxid && (
           <a href= "_blank" rel="noopener noreferrer"
-            style={{display:"block", padding:"14px", background:"rgba(100,80,200,0.15)", borderRadius:12, color:"#7c6fff", textDecoration:"none", marginBottom:24, fontSize:13}}>
-            🔍 {tl("txExplorer", lang)} → {currentTxid.slice(0,12)}...
+            style={{display: "block", padding: "14px", background: "rgba(124,111,255,0.1)", borderRadius: 12, color: "#7c6fff", marginBottom: 20, textDecoration: "none"}}>
+            🔍 查看交易记录
           </a >
         )}
 
-        <button onClick={onClose} style={{...S.btn, width:"100%"}}>
-          {lang==="zh" ? "好的，我知道了 ✦" : "Got it ✦"}
+        <button onClick={() => setShowNFTSuccess(false)} style={{...S.btn, width: "100%"}}>
+          好的，我知道了 ✦
         </button>
       </div>
     </div>
   );
 
-  const days=profile.birth?calcDays(profile.birth):0;
-  const tc=THEME_CONFIG[profile.theme]||THEME_CONFIG.cosmos;
+  const days = profile.birth ? calcDays(profile.birth) : 0;
+  const tc = THEME_CONFIG[profile.theme] || THEME_CONFIG.cosmos;
 
-  if(step==="landing") return(
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"calc(100vh - 52px)",padding:"40px 24px",textAlign:"center",position:"relative",zIndex:2}}>
-      <div style={{fontSize:11,letterSpacing:5,color:"rgba(180,160,255,0.4)",marginBottom:12,animation:"fadeUp 1s ease both"}}>SOUL HAVEN · PI NETWORK</div>
-      <h1 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:"clamp(44px,10vw,72px)",fontWeight:400,margin:"0 0 20px",background:"linear-gradient(135deg,#c8b8ff,#e8d8ff,#a898ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"fadeUp 1s 0.2s ease both,glow 4s 1s ease infinite"}}>{tl("tagline",lang)}</h1>
-      <p style={{fontSize:15,color:"rgba(200,190,255,0.6)",lineHeight:2.1,maxWidth:300,margin:"0 0 44px",animation:"fadeUp 1s 0.4s ease both",whiteSpace:"pre-line"}}>{tl("sub",lang)}</p >
-      <button style={{...S.btn,fontSize:16,padding:"16px 40px",animation:"fadeUp 1s 0.6s ease both"}} onClick={()=>setStep("form")}>{tl("cta",lang)}</button>
-      <div style={{marginTop:40,fontSize:11,color:"rgba(150,130,255,0.3)",letterSpacing:3,animation:"fadeUp 1s 0.8s ease both"}}>{tl("eternal",lang)}</div>
-    </div>
-  );
+  if (step === "landing") {
+    return (
+      <div style={{display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"calc(100vh - 60px)", padding:"40px 20px", textAlign:"center"}}>
+        <div style={{fontSize:60, marginBottom:20}}>🌌</div>
+        <h1 style={{fontFamily:"'Ma Shan Zheng',serif", fontSize:42, color:"#e8e0ff", marginBottom:16}}>灵魂不会死</h1>
+        <p style={{fontSize:16, color:"rgba(200,190,255,0.8)", lineHeight:1.8, maxWidth:320, marginBottom:40}}>
+          肉体终将归于尘土<br/>但你来过的痕迹<br/>将永远存在于区块链之上
+        </p >
+        <button style={{...S.btn, fontSize:18, padding:"16px 48px"}} onClick={() => setStep("form")}>
+          为我的灵魂寻找家园 →
+        </button>
+      </div>
+    );
+  }
 
-  if(step==="form") return(
-    <div style={{maxWidth:440,margin:"0 auto",padding:"32px 20px",position:"relative",zIndex:2}}>
-      <button onClick={()=>setStep("landing")} style={{background:"none",border:"none",color:"rgba(180,160,255,0.4)",cursor:"pointer",fontSize:13,letterSpacing:2,marginBottom:28,padding:0}}>{tl("backBtn",lang)}</button>
-      <h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:28,color:"#e8e0ff",margin:"0 0 28px"}}>{tl("appName",lang)}</h2>
-      <div style={{marginBottom:16}}>
-        <label style={S.label}>{tl("soulName",lang)}</label>
-        <input style={S.input} placeholder={tl("soulNamePh",lang)} value={profile.name||""} onChange={e=>setProfile(p=>({...p,name:e.target.value}))}/>
-      </div>
-      <div style={{marginBottom:16}}>
-        <label style={S.label}>{tl("birthDate",lang)}</label>
-        <input style={S.input} type="date" value={profile.birth||""} onChange={e=>setProfile(p=>({...p,birth:e.target.value}))}/>
-        {profile.birth&&<div style={{marginTop:8,fontSize:12,color:"rgba(180,160,255,0.5)"}}>{tl("daysWalked",lang)} <span style={{color:"#a898ff"}}>{calcDays(profile.birth).toLocaleString()}</span>{tl("daysSuffix",lang)}</div>}
-      </div>
-      <div style={{marginBottom:16}}>
-        <label style={S.label}>{tl("chooseTheme",lang)} <span style={{color:"rgba(180,160,255,0.3)"}}>{tl("kindsPrefix",lang)}{Object.keys(THEME_CONFIG).length}{tl("kindsSuffix",lang)}</span></label>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,maxHeight:300,overflowY:"auto"}}>
-          {Object.entries(THEME_CONFIG).map(([id,tc])=>(
-            <div key={id} onClick={()=>setProfile(p=>({...p,theme:id}))} style={{padding:"10px 8px",borderRadius:12,cursor:"pointer",textAlign:"center",border:profile.theme===id?`1px solid ${tc.color}`:"1px solid rgba(150,130,255,0.15)",background:profile.theme===id?glowA(tc.glow,"0.18"):"rgba(255,255,255,0.03)",transition:"all 0.2s",position:"relative"}}>
-              {profile.theme===id&&<div style={{position:"absolute",top:5,right:5,width:6,height:6,borderRadius:"50%",background:tc.color,boxShadow:`0 0 8px ${tc.color}`}}/>}
-              <div style={{fontSize:20,marginBottom:4}}>{tc.emoji}</div>
-              <div style={{fontSize:11,color:"#e8e0ff"}}>{tc[lang]||tc.en}</div>
-            </div>
-          ))}
+  if (step === "form") {
+    return (
+      <div style={{maxWidth:440, margin:"0 auto", padding:"30px 20px"}}>
+        <button onClick={() => setStep("landing")} style={{color:"#a8a8ff", marginBottom:20}}>← 返回</button>
+        
+        <h2 style={{fontFamily:"'Ma Shan Zheng',serif", fontSize:28, marginBottom:24}}>铭刻你的灵魂</h2>
+        
+        <div style={{marginBottom:16}}>
+          <label style={S.label}>灵魂名字</label>
+          <input style={S.input} placeholder="你希望被永远记住的名字" value={profile.name||""} 
+            onChange={e => setProfile(p => ({...p, name: e.target.value}))} />
         </div>
-      </div>
-      <div style={{marginBottom:24}}>
-        <label style={S.label}>{tl("epitaph",lang)} <span style={{color:"rgba(180,160,255,0.3)"}}>{tl("optional",lang)}</span></label>
-        <textarea style={{...S.input,height:90,resize:"none",lineHeight:1.9}} placeholder={tl("epitaphPh",lang)} value={profile.epitaph||""} onChange={e=>setProfile(p=>({...p,epitaph:e.target.value}))}/>
-      </div>
-      <button style={{...S.btn,width:"100%",opacity:profile.name&&profile.birth?1:0.4}} disabled={!profile.name||!profile.birth} onClick={()=>{setProfile(p=>({...p,created:true}));setStep("card");}}>{tl("engrave",lang)}</button>
-    </div>
-  );
 
-  return(
-    <div style={{maxWidth:520,margin:"0 auto",padding:"32px 20px",position:"relative",zIndex:2}}>
-      <div style={{...S.card,padding:"30px 26px",marginBottom:18,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${tc.color},transparent)`}}/>
-        <div style={{textAlign:"center",marginBottom:24}}>
-          <div style={{fontSize:46,marginBottom:8}}>{tc.emoji}</div>
-          <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:24,color:"#e8e0ff",letterSpacing:3}}>{profile.name}</div>
-          <div style={{fontSize:11,color:tc.color,letterSpacing:4,marginTop:4}}>SOUL · {tc[lang]||tc.en}</div>
+        <div style={{marginBottom:20}}>
+          <label style={S.label}>降临人间</label>
+          <input style={S.input} type="date" value={profile.birth||""} 
+            onChange={e => setProfile(p => ({...p, birth: e.target.value}))} />
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:18}}>
-          {[[tl("born",lang),profile.birth],[tl("soulAge",lang),`${(days/365.25).toFixed(1)} \( {tl("yearsOld",lang)}`],[tl("walkedDays",lang),` \){days.toLocaleString()}${tl("daysSuffix",lang)}`],[tl("dest",lang),tc[lang]||tc.en]].map(([k,v])=>(
-            <div key={k} style={{background:"rgba(255,255,255,0.04)",borderRadius:10,padding:"11px 13px",border:"1px solid rgba(150,130,255,0.12)"}}>
-              <div style={{fontSize:10,color:"rgba(180,160,255,0.45)",letterSpacing:2,marginBottom:4}}>{k}</div>
-              <div style={{fontSize:13,color:"#d4c8ff"}}>{v}</div>
-            </div>
-          ))}
-        </div>
-        {profile.epitaph&&<div style={{borderTop:"1px solid rgba(150,130,255,0.12)",paddingTop:14,marginBottom:14,fontSize:13,color:"rgba(220,210,255,0.8)",fontStyle:"italic",lineHeight:1.9}}>"{profile.epitaph}"</div>}
-        <div style={{background:"rgba(100,80,200,0.1)",borderRadius:8,padding:"9px 12px",border:"1px solid rgba(120,100,255,0.18)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:profile.nft&&profile.txid?5:0}}>
-            <div style={{width:5,height:5,borderRadius:"50%",background:profile.nft?"#4ade80":tc.color,boxShadow:`0 0 8px ${profile.nft?"#4ade80":tc.color}`,animation:"pulse 2s ease infinite",flexShrink:0}}/>
-            <span style={{fontSize:11,color:"rgba(180,160,255,0.65)",letterSpacing:1}}>{profile.nft?`${tl("nftMintedLabel",lang)} · TX: \( {(profile.txid||"").slice(0,12)}…`:` \){tl("onChain",lang)} · ${soulId(profile.name)}`}</span>
+
+        <button style={{...S.btn, width:"100%", padding:"16px"}} 
+          disabled={!profile.name || !profile.birth}
+          onClick={() => {setProfile(p => ({...p, created: true})); setStep("card");}}>
+          铭刻我的灵魂 ✦
+        </button>
+      </div>
+    );
+  }
+
+  // 灵魂卡片页面
+  return (
+    <div style={{padding:"20px", maxWidth:520, margin:"0 auto"}}>
+      <div style={{...S.card, padding:"32px 24px", textAlign:"center", marginBottom:20}}>
+        <div style={{fontSize:64, marginBottom:12}}>{tc.emoji}</div>
+        <div style={{fontFamily:"'Ma Shan Zheng',serif", fontSize:26, marginBottom:8}}>{profile.name}</div>
+        <div style={{color:tc.color, marginBottom:20}}>SOUL · {tc[lang] || tc.en}</div>
+
+        {profile.epitaph && <div style={{fontStyle:"italic", color:"#c8b8ff", marginBottom:20}}>"{profile.epitaph}"</div>}
+
+        <div style={{background:"rgba(100,80,200,0.1)", padding:"12px", borderRadius:12, marginBottom:20}}>
+          <div style={{fontSize:13, color:"#e8e0ff"}}>
+            {profile.nft ? "NFT 已铸造" : "永存于区块链"}
           </div>
-          {profile.nft&&profile.txid&&(
-            <a href={`https://blockexplorer.minepi.com/tx/${profile.txid}`} target="_blank" rel="noopener noreferrer"
-              style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:"#7c6fff",textDecoration:"none",paddingLeft:13,marginTop:2}}>
-              🔍 {tl("txExplorer",lang)} ↗
-            </a >
-          )}
         </div>
-      </div>
 
-      {!profile.nft&&(
-        <div style={{...S.card,padding:"18px 22px",marginBottom:14,display:"flex",alignItems:"center",gap:14}}>
-          <div style={{fontSize:28}}>🔮</div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:13,color:"#e8e0ff",marginBottom:3}}>{tl("mintNftLabel",lang)}</div>
-            <div style={{fontSize:11,color:"rgba(180,160,255,0.5)"}}>{tl("mintNftDesc",lang)}</div>
-          </div>
-          <button style={{...S.btn,padding:"9px 16px",fontSize:12,flexShrink:0}} onClick={handleMint} disabled={!!mintStatus}>
-            {mintStatus==="paying"?tl("mintPaying",lang):mintStatus==="minting"?tl("mintMinting",lang):mintStatus==="done"?tl("mintDone",lang):tl("mintCost",lang)}
+        {!profile.nft && (
+          <button style={{...S.btn, width:"100%", fontSize:16, padding:"16px"}} onClick={handleMint} disabled={!!mintStatus}>
+            {mintStatus ? "铸造中..." : "铸造灵魂 NFT · 1π ✦"}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {!piUser&&(
-        <div style={{...S.card,padding:"16px 22px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onClick={async()=>{setConnecting(true);await connectPi();setConnecting(false);}}>
-          <div style={{fontSize:24}}>π</div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:13,color:"#e8e0ff"}}>{tl("connectPiLabel",lang)}</div>
-            <div style={{fontSize:11,color:"rgba(180,160,255,0.5)"}}>{tl("connectPiDesc",lang)}</div>
-          </div>
-          <div style={{fontSize:13,color:"rgba(180,160,255,0.4)"}}>{connecting?"…":"→"}</div>
-        </div>
-      )}
-
-      {piUser&&(
-        <div style={{...S.card,padding:"14px 18px",display:"flex",alignItems:"center",gap:12}}>
-          <div style={{fontSize:20}}>🔍</div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:12,color:"#e8e0ff",marginBottom:2}}>{lang==="zh"?"查看我的 Pi 交易记录":"View My Pi Transactions"}</div>
-            <div style={{fontSize:10,color:"rgba(180,160,255,0.45)"}}>{lang==="zh"?"在区块链浏览器查看所有支付记录":"View all payments on block explorer"}</div>
-          </div>
-          <a href={`https://blockexplorer.minepi.com/accounts/${piUser.uid}`} target="_blank" rel="noopener noreferrer"
-            style={{fontSize:12,color:"#7c6fff",textDecoration:"none",flexShrink:0}}>
-            查看 ↗
-          </a >
-        </div>
-      )}
-
-      {showNFTSuccess && <NFTSuccessModal onClose={() => setShowNFTSuccess(false)} />}
+      {showNFTSuccess && <NFTSuccessModal />}
     </div>
   );
 }
