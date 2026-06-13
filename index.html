@@ -2216,47 +2216,22 @@ function HoloCanvas({name, birthYear, relation, size=220}){
 }
 
 // ─── 数字亡魂页 ────────────────────────────────────────────────
-function MemorialPage({profile, piUser, payWithPi, lang}){
+function MemorialPage({profile,piUser,payWithPi,lang}){
   const [memorials,setMemorials]=useState([
     {id:"m1",name:"外婆",relation:"祖母",birthYear:"1928",epitaph:"谢谢你做的每一碗汤圆，我永远记得你的笑容",created:"2024-01-15",paid:true},
   ]);
   const [creating,setCreating]=useState(false);
-  const [form,setForm]=useState({name:"",relation:"",birthYear:"",epitaph:"",consent:false,photoPreview:null, holographic:null});
+  const [form,setForm]=useState({name:"",relation:"",birthYear:"",epitaph:"",consent:false,photoPreview:null});
   const [paying,setPaying]=useState(false);
   const [selected,setSelected]=useState("m1");
   const [talkMsg,setTalkMsg]=useState("");
   const [talkDone,setTalkDone]=useState({});
   const [talking,setTalking]=useState(false);
   const [offering,setOffering]=useState({});
-  const [generatingHolo,setGeneratingHolo]=useState(false);
 
   const relations=lang==="zh"
     ?["父亲","母亲","祖父","祖母","伴侣","挚友","初恋","兄弟","姐妹","其他"]
     :["Father","Mother","Grandfather","Grandmother","Partner","Best Friend","First Love","Brother","Sister","Other"];
-
-  // 照片上传（本地）
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setForm(f => ({...f, photoPreview: ev.target.result, holographic: null}));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // 生成全息图像
-  const generateHolographic = async () => {
-    if (!form.photoPreview) {
-      alert("请先上传照片");
-      return;
-    }
-    setGeneratingHolo(true);
-    await new Promise(r => setTimeout(r, 1300)); // 模拟生成时间
-    setForm(f => ({...f, holographic: form.photoPreview}));
-    setGeneratingHolo(false);
-    alert("✦ 全息图像已生成！");
-  };
 
   const create=async()=>{
     if(!form.name||!form.relation||!form.birthYear||!form.consent)return;
@@ -2264,11 +2239,9 @@ function MemorialPage({profile, piUser, payWithPi, lang}){
     const r=await payWithPi(1,"数字亡魂");
     if(r.success){
       const newM={id:"m"+Date.now(),name:form.name,relation:form.relation,
-        birthYear:form.birthYear,epitaph:form.epitaph,created:new Date().toISOString().slice(0,10),paid:true,
-        photoPreview:form.photoPreview, holographic:form.holographic};
+        birthYear:form.birthYear,epitaph:form.epitaph,created:new Date().toISOString().slice(0,10),paid:true};
       setMemorials(m=>[...m,newM]);setSelected(newM.id);
-      setForm({name:"",relation:"",birthYear:"",epitaph:"",consent:false,photoPreview:null,holographic:null});
-      setCreating(false);
+      setForm({name:"",relation:"",birthYear:"",epitaph:"",consent:false});setCreating(false);
     }
     setPaying(false);
   };
@@ -2296,27 +2269,28 @@ function MemorialPage({profile, piUser, payWithPi, lang}){
     <div style={S.section}>
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:18,flexWrap:"wrap",gap:10}}>
         <div>
-          <h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:26,color:"#e8e0ff",margin:"0 0 4px"}}>数字亡魂纪念</h2>
-          <p style={{fontSize:13,color:"rgba(180,160,255,0.5)",margin:0,maxWidth:480,lineHeight:1.7}}>为逝去的亲人创建永恒全息纪念</p >
+          <h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:26,color:"#e8e0ff",margin:"0 0 4px"}}>{tl("memorialTitle",lang)}</h2>
+          <p style={{fontSize:13,color:"rgba(180,160,255,0.5)",margin:0,maxWidth:480,lineHeight:1.7}}>{tl("memorialSub",lang)}</p >
         </div>
-        <button style={S.btn} onClick={()=>setCreating(true)}>创建新纪念</button>
+        <button style={S.btn} onClick={()=>setCreating(true)}>{tl("memorialNew",lang)}</button>
+      </div>
+
+      {/* 隐私说明 */}
+      <div style={{...S.card,padding:"12px 16px",marginBottom:16,background:"rgba(74,222,128,0.05)",border:"1px solid rgba(74,222,128,0.2)"}}>
+        <div style={{fontSize:11,color:"rgba(74,222,128,0.8)",lineHeight:1.8}}>{tl("memorialPrivacy",lang)}</div>
       </div>
 
       {/* 创建表单 */}
       {creating&&(
         <div style={{...S.card,padding:"22px",marginBottom:18,animation:"fadeUp 0.3s ease"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <span style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:18,color:"#e8e0ff"}}>创建数字亡魂</span>
+            <span style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:18,color:"#e8e0ff"}}>{tl("memorialNew",lang)}</span>
             <button onClick={()=>setCreating(false)} style={{background:"none",border:"none",color:"rgba(180,160,255,0.4)",cursor:"pointer",fontSize:18}}>×</button>
           </div>
 
+          {/* 关系选择 */}
           <div style={{marginBottom:13}}>
-            <label style={S.label}>姓名</label>
-            <input style={S.input} placeholder="逝者姓名" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>
-          </div>
-
-          <div style={{marginBottom:13}}>
-            <label style={S.label}>关系</label>
+            <label style={S.label}>{tl("memorialRelation",lang)}</label>
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
               {relations.map(r=>(
                 <button key={r} onClick={()=>setForm(f=>({...f,relation:r}))}
@@ -2330,52 +2304,72 @@ function MemorialPage({profile, piUser, payWithPi, lang}){
           </div>
 
           <div style={{marginBottom:13}}>
-            <label style={S.label}>出生年份</label>
-            <input style={S.input} type="number" placeholder="例：1945" value={form.birthYear} onChange={e=>setForm(f=>({...f,birthYear:e.target.value}))}/>
+            <label style={S.label}>{tl("memorialName",lang)}</label>
+            <input style={S.input} placeholder={tl("memorialNamePh",lang)} value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>
           </div>
 
-          {/* 照片上传 + 全息生成 */}
-          <div style={{marginBottom:16}}>
-            <label style={S.label}>纪念照片（可跳过）</label>
-            <input type="file" accept="image/*" onChange={handlePhotoChange} style={{...S.input, padding:"12px 16px"}}/>
-            
-            {form.photoPreview && (
-              <div style={{marginTop:12, textAlign:"center"}}>
-                < img src={form.photoPreview} style={{maxHeight:160, borderRadius:12}} alt="preview"/>
-              </div>
-            )}
+          <div style={{marginBottom:13}}>
+            <label style={S.label}>{tl("memorialBirth",lang)}</label>
+            <input style={S.input} type="number" min="1900" max="2020" placeholder="例：1945"
+              value={form.birthYear} onChange={e=>setForm(f=>({...f,birthYear:e.target.value}))}/>
+          </div>
 
-            {form.photoPreview && (
-              <button onClick={generateHolographic} disabled={generatingHolo} 
-                style={{...S.btn, width:"100%", marginTop:12, background:"linear-gradient(135deg,#7c6fff,#a855f7)"}}>
-                {generatingHolo ? "生成全息图像中..." : "✦ 生成全息图像"}
-              </button>
-            )}
-
-            {form.holographic && (
-              <div style={{marginTop:12, padding:12, background:"rgba(124,111,255,0.08)", borderRadius:12, textAlign:"center"}}>
-                <div style={{fontSize:12, color:"#c8b8ff", marginBottom:8}}>全息图像预览</div>
-                < img src={form.holographic} style={{maxHeight:180, borderRadius:12}} alt="holo"/>
+          <div style={{marginBottom:13}}>
+            <label style={S.label}>{tl("memorialPhoto",lang)} <span style={{color:"rgba(180,160,255,0.3)"}}>（可跳过）</span></label>
+            <div style={{position:"relative"}}>
+              <input type="file" accept="image/*" id="photo-upload"
+                onChange={e=>{
+                  const file=e.target.files?.[0];
+                  if(!file)return;
+                  const reader=new FileReader();
+                  reader.onload=ev=>setForm(f=>({...f,photoPreview:ev.target.result}));
+                  reader.readAsDataURL(file);
+                }}
+                style={{position:"absolute",inset:0,opacity:0,cursor:"pointer",width:"100%",height:"100%",zIndex:2}}/>
+              <div style={{padding:"14px",background:"rgba(100,80,200,0.06)",border:"2px dashed rgba(150,130,255,0.2)",borderRadius:12,textAlign:"center",color:"rgba(180,160,255,0.5)",fontSize:13,minHeight:80,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:8,position:"relative"}}>
+                {form.photoPreview?(
+                  <div style={{position:"relative"}}>
+                    < img src={form.photoPreview} alt="preview" style={{width:80,height:80,borderRadius:"50%",objectFit:"cover",border:"2px solid rgba(150,130,255,0.4)",filter:"blur(3px) brightness(0.7)"}}/>
+                    <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#c8b8ff"}}>AI处理中</div>
+                    <button onClick={e=>{e.preventDefault();e.stopPropagation();setForm(f=>({...f,photoPreview:null}));}} style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",background:"#dc2626",border:"none",color:"#fff",fontSize:10,cursor:"pointer",zIndex:3,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                  </div>
+                ):(
+                  <>
+                    <span style={{fontSize:28}}>📷</span>
+                    <span>{lang==="zh"?"点击上传照片（可选）":"Tap to upload photo (optional)"}</span>
+                  </>
+                )}
               </div>
-            )}
+            </div>
+            <div style={{fontSize:10,color:"rgba(180,160,255,0.35)",marginTop:5,lineHeight:1.7}}>{tl("memorialPhotoNote",lang)}</div>
           </div>
 
           <div style={{marginBottom:16}}>
-            <label style={S.label}>灵魂留言（可选）</label>
+            <label style={S.label}>{tl("memorialEpitaph",lang)}</label>
             <textarea style={{...S.input,height:90,resize:"none",lineHeight:1.9}}
-              placeholder="写下对逝者的思念……"
+              placeholder={tl("memorialEpitaphPh",lang)}
               value={form.epitaph} onChange={e=>setForm(f=>({...f,epitaph:e.target.value}))}/>
+          </div>
+
+          {/* 知情同意 */}
+          <div style={{padding:"12px 14px",background:"rgba(251,191,36,0.06)",border:"1px solid rgba(251,191,36,0.2)",borderRadius:10,marginBottom:14}}>
+            <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer"}}>
+              <input type="checkbox" checked={form.consent} onChange={e=>setForm(f=>({...f,consent:e.target.checked}))}
+                style={{marginTop:2,accentColor:"#7c6fff",flexShrink:0}}/>
+              <span style={{fontSize:11,color:"rgba(251,191,36,0.8)",lineHeight:1.8}}>{tl("memorialConsent",lang)}</span>
+            </label>
           </div>
 
           <button style={{...S.btn,width:"100%",opacity:form.name&&form.relation&&form.birthYear&&form.consent&&piUser?1:0.4}}
             disabled={!form.name||!form.relation||!form.birthYear||!form.consent||!piUser||paying}
             onClick={create}>
-            {paying ? "创建中..." : "创建数字亡魂纪念 · 1π"}
+            {paying?<span>AI {tl("memorialCreating",lang)}</span>:tl("memorialCreate",lang)}
           </button>
+          {!piUser&&<div style={S.warn}>{tl("legendPiWarn","zh")}</div>}
         </div>
       )}
 
-      {/* 其余原有代码保持不变（列表和详情部分） */}
+      {/* 亡魂列表 */}
       {memorials.length>0&&(
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
           {memorials.map(m=>(
@@ -2390,18 +2384,100 @@ function MemorialPage({profile, piUser, payWithPi, lang}){
         </div>
       )}
 
+      {/* 当前亡魂展示 */}
       {cur&&(
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          <div style={{...S.card,padding:"28px 22px",textAlign:"center",position:"relative",overflow:"hidden",background:"rgba(5,3,25,0.95)",border:"1px solid rgba(150,130,255,0.25)"}}>
-            {cur.holographic && < img src={cur.holographic} style={{maxHeight:200, borderRadius:16, marginBottom:12}} alt="holo"/>}
-            <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:24,color:"#e8e0ff",marginBottom:4}}>{cur.name}</div>
-            <div style={{fontSize:12,color:"rgba(180,160,255,0.5)"}}>{cur.relation} · 生于约 {cur.birthYear}</div>
+          {/* 全息展示卡 */}
+          <div style={{...S.card,padding:"28px 22px",textAlign:"center",position:"relative",overflow:"hidden",
+            background:"rgba(5,3,25,0.95)",border:"1px solid rgba(150,130,255,0.25)"}}>
+            {/* 扫描光效 */}
+            <div style={{position:"absolute",top:0,left:0,right:0,height:2,
+              background:"linear-gradient(90deg,transparent,rgba(150,130,255,0.6),transparent)",
+              animation:"scanLine 3s ease-in-out infinite"}}/>
+            <div style={{position:"absolute",inset:0,background:"repeating-linear-gradient(0deg,rgba(100,80,200,0.02) 0px,rgba(100,80,200,0.02) 1px,transparent 1px,transparent 6px)"}}/>
+
+            <div style={{position:"relative",display:"inline-block",marginBottom:16}}>
+              <HoloCanvas name={cur.name} birthYear={cur.birthYear} relation={cur.relation} size={180}/>
+              {/* 全息底座光圈 */}
+              <div style={{position:"absolute",bottom:-8,left:"50%",transform:"translateX(-50%)",
+                width:120,height:16,background:"radial-gradient(ellipse,rgba(150,130,255,0.4),transparent)",
+                borderRadius:"50%",filter:"blur(4px)"}}/>
+            </div>
+
+            <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:24,color:"#e8e0ff",marginBottom:4,
+              textShadow:"0 0 20px rgba(150,130,255,0.8)"}}>{cur.name}</div>
+            <div style={{fontSize:12,color:"rgba(180,160,255,0.5)",marginBottom:2}}>
+              {cur.relation} · {lang==="zh"?"生于约":"Born ~"} {cur.birthYear}
+            </div>
+            <div style={{fontSize:10,color:"rgba(150,130,255,0.4)",letterSpacing:2,marginBottom:16}}>
+              HOLOGRAPHIC SOUL · CHAIN #{Math.abs(cur.name.split("").reduce((a,c)=>a+c.charCodeAt(0),0)*137%999999).toString().padStart(6,"0")}
+            </div>
+
+            {cur.epitaph&&(
+              <div style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:14,color:"rgba(220,210,255,0.8)",
+                fontStyle:"italic",lineHeight:2,maxWidth:380,margin:"0 auto 16px",
+                padding:"12px 16px",background:"rgba(100,80,200,0.08)",borderRadius:10,
+                border:"1px solid rgba(150,130,255,0.12)"}}>
+                "{cur.epitaph}"
+              </div>
+            )}
+
+            {/* 上链标记 */}
+            <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"6px 14px",
+              background:"rgba(74,222,128,0.08)",border:"1px solid rgba(74,222,128,0.25)",borderRadius:20}}>
+              <div style={{width:5,height:5,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 8px #4ade80",animation:"pulse 2s ease infinite"}}/>
+              <span style={{fontSize:11,color:"#4ade80"}}>{lang==="zh"?"灵魂已上链 · 永久守护":"Soul on-chain · Protected forever"}</span>
+            </div>
+          </div>
+
+          {/* 祭品区 */}
+          <div style={{...S.card,padding:"18px 20px"}}>
+            <div style={{fontSize:12,color:"rgba(180,160,255,0.5)",marginBottom:12,letterSpacing:1}}>{tl("memorialOffer",lang)}</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+              {offeringTypes.map(ot=>{
+                const done=offering[cur.id+"_"+ot.id];
+                return(
+                  <button key={ot.id} onClick={()=>!done&&burnOffering(cur.id,ot.id)}
+                    style={{textAlign:"center",padding:"12px 6px",borderRadius:12,
+                      background:done?`rgba(100,80,200,0.2)`:"rgba(100,80,200,0.06)",
+                      border:done?"1px solid rgba(150,130,255,0.4)":"1px solid rgba(150,130,255,0.15)",
+                      cursor:done?"default":"pointer",transition:"all 0.2s"}}>
+                    <div style={{fontSize:22,marginBottom:4}}>{ot.emoji}</div>
+                    <div style={{fontSize:10,color:done?"#c8b8ff":"rgba(180,160,255,0.5)"}}>{lang==="zh"?ot.zh:ot.en}</div>
+                    {!done&&<div style={{fontSize:9,color:"rgba(150,130,255,0.4)",marginTop:2}}>0.1π</div>}
+                    {done&&<div style={{fontSize:9,color:"#4ade80",marginTop:2}}>✓</div>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 对话区 */}
+          <div style={{...S.card,padding:"18px 20px"}}>
+            <div style={{fontSize:12,color:"rgba(180,160,255,0.5)",marginBottom:12,letterSpacing:1}}>{tl("memorialTalk",lang)}</div>
+            {talkDone[cur.id]?(
+              <div style={{padding:"12px 14px",background:"rgba(100,80,200,0.1)",borderRadius:10,border:"1px solid rgba(150,130,255,0.2)"}}>
+                <div style={{fontSize:11,color:"#4ade80",marginBottom:6}}>✦ {tl("memorialTalkDone",lang)}</div>
+                <div style={{fontSize:13,color:"rgba(220,210,255,0.8)",fontStyle:"italic",lineHeight:1.8}}>"{talkDone[cur.id]}"</div>
+              </div>
+            ):(
+              <div>
+                <textarea style={{...S.input,height:80,resize:"none",lineHeight:1.9,marginBottom:10}}
+                  placeholder={tl("memorialTalkPh",lang)}
+                  value={talkMsg} onChange={e=>setTalkMsg(e.target.value)}/>
+                <button style={{...S.btn,width:"100%",opacity:talkMsg.trim()&&piUser?1:0.4}}
+                  disabled={!talkMsg.trim()||!piUser||talking} onClick={sendTalk}>
+                  {talking?"…":tl("memorialTalkSend",lang)+" · 0.1π"}
+                </button>
+                {!piUser&&<div style={S.warn}>{tl("pioneerPiWarn",lang)}</div>}
+              </div>
+            )}
           </div>
         </div>
       )}
     </div>
   );
-}
+}}
 
 // ─── 先锋纪念碑页 ──────────────────────────────────────────────
 const MOCK_PIONEERS=[
