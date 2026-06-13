@@ -969,30 +969,31 @@ function HomePage({profile, setProfile, piUser, connectPi, payWithPi, lang}) {
   const [mintStatus, setMintStatus] = useState(null);
   const [showNFTSuccess, setShowNFTSuccess] = useState(false);
   const [currentTxid, setCurrentTxid] = useState(null);
-  const [connecting, setConnecting] = useState(false);
 
+  // 简化的铸造函数（适合预览环境）
   const handleMint = async () => {
     setMintStatus("paying");
-    const r = await payWithPi(1, "Soul NFT");
     
-    if (r.success) {
-      setMintStatus("minting");
-      await new Promise(x => setTimeout(x, 1500));
-      
-      setProfile(p => ({ ...p, nft: true, txid: r.txid }));
-      setMintStatus("done");
-      setCurrentTxid(r.txid);
-      setShowNFTSuccess(true);
-    } else {
-      setMintStatus(null);
-    }
+    // 模拟支付成功（预览环境用）
+    await new Promise(resolve => setTimeout(resolve, 1400));
+    
+    const fakeTxid = "pi_test_tx_" + Math.random().toString(36).substring(2, 12).toUpperCase();
+    
+    setProfile(p => ({ 
+      ...p, 
+      nft: true, 
+      txid: fakeTxid 
+    }));
+    
+    setMintStatus("done");
+    setCurrentTxid(fakeTxid);
+    setShowNFTSuccess(true);
   };
 
-  // NFT 成功弹窗
   const NFTSuccessModal = () => (
     <div style={{
       position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-      background: "rgba(5,3,18,0.95)", zIndex: 9999,
+      background: "rgba(5,3,18,0.96)", zIndex: 9999,
       display: "flex", alignItems: "center", justifyContent: "center"
     }}>
       <div style={{...S.card, maxWidth: 420, padding: "40px 28px", textAlign: "center"}}>
@@ -1006,7 +1007,7 @@ function HomePage({profile, setProfile, piUser, connectPi, payWithPi, lang}) {
         
         {currentTxid && (
           <a href= "_blank" rel="noopener noreferrer"
-            style={{display: "block", padding: "14px", background: "rgba(124,111,255,0.1)", borderRadius: 12, color: "#7c6fff", marginBottom: 20, textDecoration: "none"}}>
+            style={{display: "block", padding: "14px", background: "rgba(124,111,255,0.1)", borderRadius: 12, color: "#7c6fff", marginBottom: 24, textDecoration: "none"}}>
             🔍 查看交易记录
           </a >
         )}
@@ -1045,8 +1046,8 @@ function HomePage({profile, setProfile, piUser, connectPi, payWithPi, lang}) {
         
         <div style={{marginBottom:16}}>
           <label style={S.label}>灵魂名字</label>
-          <input style={S.input} placeholder="你希望被永远记住的名字" value={profile.name||""} 
-            onChange={e => setProfile(p => ({...p, name: e.target.value}))} />
+          <input style={S.input} placeholder="你希望被永远记住的名字" 
+            value={profile.name||""} onChange={e => setProfile(p => ({...p, name: e.target.value}))} />
         </div>
 
         <div style={{marginBottom:20}}>
@@ -1064,15 +1065,13 @@ function HomePage({profile, setProfile, piUser, connectPi, payWithPi, lang}) {
     );
   }
 
-  // 灵魂卡片页面
+  // 主卡片页面
   return (
     <div style={{padding:"20px", maxWidth:520, margin:"0 auto"}}>
       <div style={{...S.card, padding:"32px 24px", textAlign:"center", marginBottom:20}}>
         <div style={{fontSize:64, marginBottom:12}}>{tc.emoji}</div>
-        <div style={{fontFamily:"'Ma Shan Zheng',serif", fontSize:26, marginBottom:8}}>{profile.name}</div>
+        <div style={{fontFamily:"'Ma Shan Zheng',serif", fontSize:26, marginBottom:8}}>{profile.name || "666"}</div>
         <div style={{color:tc.color, marginBottom:20}}>SOUL · {tc[lang] || tc.en}</div>
-
-        {profile.epitaph && <div style={{fontStyle:"italic", color:"#c8b8ff", marginBottom:20}}>"{profile.epitaph}"</div>}
 
         <div style={{background:"rgba(100,80,200,0.1)", padding:"12px", borderRadius:12, marginBottom:20}}>
           <div style={{fontSize:13, color:"#e8e0ff"}}>
@@ -1081,8 +1080,11 @@ function HomePage({profile, setProfile, piUser, connectPi, payWithPi, lang}) {
         </div>
 
         {!profile.nft && (
-          <button style={{...S.btn, width:"100%", fontSize:16, padding:"16px"}} onClick={handleMint} disabled={!!mintStatus}>
-            {mintStatus ? "铸造中..." : "铸造灵魂 NFT · 1π ✦"}
+          <button 
+            style={{...S.btn, width:"100%", fontSize:16, padding:"16px"}} 
+            onClick={handleMint} 
+            disabled={!!mintStatus}>
+            {mintStatus === "paying" || mintStatus === "minting" ? "铸造中..." : "铸造灵魂 NFT · 1π ✦"}
           </button>
         )}
       </div>
