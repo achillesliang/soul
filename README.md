@@ -21,18 +21,21 @@ https://app.netlify.com/drop
 ### 2. 设置环境变量（重要！）
 在 Netlify 控制台 → Site Settings → Environment Variables 添加：
 ```
-PI_API_KEY = 你的Pi Developer Portal API Key
+PI_API_KEY = 你的Pi Developer Portal API Key（Mainnet）
+ANTHROPIC_API_KEY = 你的Anthropic API Key（用于"AI纪念馆"对话与AI传记功能）
 ```
-获取方式：https://developers.minepi.com → 你的App → API Keys
+获取方式：
+- Pi Key：https://developers.minepi.com → 你的App → API Keys
+- Anthropic Key：https://console.anthropic.com → API Keys
+
+设置完成后需要 Trigger deploy 一次，环境变量才会生效。
 
 ### 3. 在 Pi Developer Portal 配置
 - App URL: https://你的站点.netlify.app
 - Whitelist URLs: https://你的站点.netlify.app
 
-### 4. 沙盒测试
-- sandbox: true 已设置
-- 用 Pi Browser 打开你的 Netlify URL
-- 用测试 Pi 账号登录并支付
+### 4. 当前为主网模式
+代码中 `sandbox: false`，即真实 Pi 主网支付，请确认填入的是 Mainnet API Key 而不是 Testnet 的。
 
 ## 支付流程（修复后）
 ```

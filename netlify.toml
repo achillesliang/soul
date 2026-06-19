@@ -1,5 +1,5 @@
 [build]
-  publish = "."
+  publish = "public"
   functions = "netlify/functions"
 
 [[redirects]]
@@ -15,6 +15,11 @@
 [[redirects]]
   from = "/api/pi-me"
   to   = "/.netlify/functions/pi-me"
+  status = 200
+
+[[redirects]]
+  from = "/api/ai-chat"
+  to   = "/.netlify/functions/ai-chat"
   status = 200
 
 [[headers]]
