@@ -1610,7 +1610,11 @@ function PlanetPage({profile,piUser,connectPi,payWithPi,lang}){
       animId=requestAnimationFrame(render);
     };
     animId=requestAnimationFrame(render);
-    const xy=e=>e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};
+    const xy=e=>{
+      // touchend 时 e.touches 已清空，必须用 e.changedTouches 拿最后触点
+      const src=e.changedTouches?e.changedTouches[0]:e.touches?e.touches[0]:e;
+      return{x:src.clientX,y:src.clientY};
+    };
     const onDown=e=>{const{x,y}=xy(e);galaxyDragRef.current={on:true,x,y};};
     const onMove=e=>{
       const{x,y}=xy(e);
@@ -2069,208 +2073,185 @@ function VoicePage({profile,piUser,payWithPi,lang}){
   );
 }
 
-// ─── 照片 → AI深度估计 → Three.js 3D全息重建 ──────────────────
-// 懒加载：只有用户上传了真实照片时才加载 Three.js + AI 深度模型，
-// 不影响首页和无照片场景的加载速度。
-let _threeLoadingPromise=null;
-function loadThree(){
-  if(window.THREE&&window.THREE.OrbitControls)return Promise.resolve(window.THREE);
-  if(_threeLoadingPromise)return _threeLoadingPromise;
-  _threeLoadingPromise=new Promise((resolve,reject)=>{
-    const s1=document.createElement("script");
-    s1.src="https://unpkg.com/three@0.149.0/build/three.min.js";
-    s1.onload=()=>{
-      const s2=document.createElement("script");
-      s2.src="https://unpkg.com/three@0.149.0/examples/js/controls/OrbitControls.js";
-      s2.onload=()=>resolve(window.THREE);
-      s2.onerror=()=>reject(new Error("3D引擎(OrbitControls)加载失败，请检查网络"));
-      document.head.appendChild(s2);
-    };
-    s1.onerror=()=>reject(new Error("3D引擎(Three.js)加载失败，请检查网络"));
-    document.head.appendChild(s1);
-  });
-  return _threeLoadingPromise;
-}
-
-let _depthPipelinePromise=null;
-function loadDepthPipeline(){
-  if(_depthPipelinePromise)return _depthPipelinePromise;
-  _depthPipelinePromise=(async()=>{
-    // transformers.js：浏览器内运行真实的单图深度估计模型（depth-anything 量化版）
-    const {pipeline,env}=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2");
-    env.allowLocalModels=false;
-    return await pipeline("depth-estimation","Xenova/depth-anything-small-hf");
-  })();
-  return _depthPipelinePromise;
-}
-
-const HOLO_GRID=64; // 顶点网格分辨率：性能与精细度的折中（手机端友好）
-
+// ─── 照片 → 全息图（纯Canvas，无外部依赖，Pi Browser友好）──────
+// 用本地像素亮度模拟深度，生成视差位移+全息Shader效果，秒开无需下载模型
 function PhotoHologram3D({photoSrc,size=220,name}){
-  const mountRef=useRef();
-  const [stage,setStage]=useState("loading"); // loading | ready | error
-  const [steps,setSteps]=useState({face:false,depth:false,rebuild:false,texture:false,light:false});
-  const [errMsg,setErrMsg]=useState("");
+  const canvasRef=useRef(null);
+  const animRef=useRef(null);
+  const [ready,setReady]=useState(false);
+  const [err,setErr]=useState("");
 
   useEffect(()=>{
-    let cancelled=false,renderer,controls,raf;
-    setStage("loading");
-    setSteps({face:false,depth:false,rebuild:false,texture:false,light:false});
-    setErrMsg("");
+    if(!photoSrc)return;
+    setReady(false);setErr("");
+    let cancelled=false;
 
-    (async()=>{
-      try{
-        // 1. 加载 3D 引擎
-        const THREE=await loadThree();
+    const canvas=canvasRef.current;
+    if(!canvas)return;
+    const ctx=canvas.getContext("2d");
+    canvas.width=size;canvas.height=size;
+
+    const img=new Image();
+    img.crossOrigin="anonymous";
+    img.onload=()=>{
+      if(cancelled)return;
+
+      // 1. 把照片绘制到离屏canvas，采样深度（亮度→近，暗→远）
+      const OFF=64; // 深度采样分辨率
+      const off=document.createElement("canvas");
+      off.width=OFF;off.height=OFF;
+      const oc=off.getContext("2d");
+      oc.drawImage(img,0,0,OFF,OFF);
+      const px=oc.getImageData(0,0,OFF,OFF).data;
+      // 深度图：每个格子的亮度值（0-1）
+      const depth=(x,y)=>{
+        const i=(Math.floor(y)*OFF+Math.floor(x))*4;
+        return(px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114)/255;
+      };
+
+      // 颜色种子（按名字算色相，跟HoloCanvas保持同一风格）
+      const hue=Math.abs((name||"soul").split("").reduce((a,c)=>(a*31+c.charCodeAt(0))|0,0))%360;
+      const col=(a)=>`hsla(${hue},80%,65%,${a})`;
+
+      // 粒子环数据（只算一次，每帧复用）
+      const PARTS=120;
+      const parts=Array.from({length:PARTS},(_,i)=>{
+        const a=(i/PARTS)*Math.PI*2;
+        const r=0.38+Math.random()*0.12;
+        return{a,r,speed:0.003+Math.random()*0.004,phase:Math.random()*Math.PI*2,size:1+Math.random()*1.8};
+      });
+
+      let t=0;
+      const S=size,CX=S/2,CY=S/2;
+
+      const draw=()=>{
         if(cancelled)return;
-        setSteps(s=>({...s,face:true}));
+        t+=0.022;
+        ctx.clearRect(0,0,S,S);
 
-        // 2. 加载照片并限制分辨率（移动端性能考虑）
-        const img=await new Promise((res,rej)=>{
-          const im=new Image();im.crossOrigin="anonymous";
-          im.onload=()=>res(im);im.onerror=()=>rej(new Error("照片加载失败"));
-          im.src=photoSrc;
-        });
-        if(cancelled)return;
-        const MAXDIM=256;
-        const scale=Math.min(1,MAXDIM/Math.max(img.width,img.height));
-        const cw=Math.max(1,Math.round(img.width*scale)),ch=Math.max(1,Math.round(img.height*scale));
-        const srcCanvas=document.createElement("canvas");
-        srcCanvas.width=cw;srcCanvas.height=ch;
-        srcCanvas.getContext("2d").drawImage(img,0,0,cw,ch);
+        // 底层：径向暗晕
+        const bg=ctx.createRadialGradient(CX,CY,S*0.1,CX,CY,S*0.55);
+        bg.addColorStop(0,`hsla(${hue},40%,8%,0.92)`);
+        bg.addColorStop(1,"rgba(5,3,18,0.0)");
+        ctx.fillStyle=bg;ctx.fillRect(0,0,S,S);
 
-        // 3. 真实AI深度估计（在本机/本地浏览器推理，照片不上传服务器）
-        const depthEstimator=await loadDepthPipeline();
-        if(cancelled)return;
-        const out=await depthEstimator(srcCanvas.toDataURL("image/jpeg",0.92));
-        if(cancelled)return;
-        setSteps(s=>({...s,depth:true}));
-
-        // 把深度图重采样到顶点网格大小，用于位移
-        const gridSize=HOLO_GRID+1;
-        const gridCanvas=document.createElement("canvas");
-        gridCanvas.width=gridSize;gridCanvas.height=gridSize;
-        const gctx=gridCanvas.getContext("2d");
-        const depthSrcCanvas=out?.depth?.toCanvas?out.depth.toCanvas():null;
-        if(depthSrcCanvas)gctx.drawImage(depthSrcCanvas,0,0,gridSize,gridSize);
-        const depthData=gctx.getImageData(0,0,gridSize,gridSize).data;
-        if(cancelled)return;
-        setSteps(s=>({...s,rebuild:true}));
-
-        // 4. 构建位移网格（point-cloud式3D重建）
-        const scene=new THREE.Scene();
-        const camera=new THREE.PerspectiveCamera(45,1,0.1,100);
-        camera.position.set(0,0,9);
-
-        renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
-        renderer.setSize(size,size);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
-        if(mountRef.current){mountRef.current.innerHTML="";mountRef.current.appendChild(renderer.domElement);}
-
-        const geo=new THREE.PlaneGeometry(6,6,HOLO_GRID,HOLO_GRID);
-        const pos=geo.attributes.position;
-        for(let i=0;i<pos.count;i++){
-          const row=Math.floor(i/gridSize),col=i%gridSize;
-          const di=(row*gridSize+col)*4;
-          const depthVal=(depthData[di]||0)/255; // 越亮越靠近镜头
-          pos.setZ(i,(depthVal-0.5)*2.4);
+        // 主体：照片 + 视差位移（深度越高向光源方向偏移）
+        const GRID=18; // 网格分辨率（越高越细腻，越慢）
+        const cellW=S/GRID,cellH=S/GRID;
+        const parallax=Math.sin(t*0.7)*8; // 视差强度（±8px）
+        for(let gy=0;gy<GRID;gy++){
+          for(let gx=0;gx<GRID;gx++){
+            const d=depth(gx/GRID*OFF,gy/GRID*OFF);
+            const ox=parallax*d,oy=parallax*d*0.5;
+            // 绘制该格子的照片片段（含位移）
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(gx*cellW,gy*cellH,cellW+1,cellH+1);
+            ctx.clip();
+            ctx.drawImage(img,
+              (gx/GRID)*img.width,(gy/GRID)*img.height,
+              img.width/GRID+1,img.height/GRID+1,
+              gx*cellW+ox,gy*cellH+oy,
+              cellW+1,cellH+1);
+            ctx.restore();
+          }
         }
-        geo.computeVertexNormals();
 
-        // 5. 纹理映射 + 全息Shader（扫描线+边缘光晕）
-        const tex=new THREE.CanvasTexture(srcCanvas);
-        tex.needsUpdate=true;
-        const seedHue=Math.abs((name||"soul").split("").reduce((a,c)=>(a*31+c.charCodeAt(0))|0,0))%360;
+        // 全息色调叠加
+        const tint=ctx.createRadialGradient(CX,CY,0,CX,CY,S*0.5);
+        tint.addColorStop(0,col(0.08));
+        tint.addColorStop(0.6,col(0.18));
+        tint.addColorStop(1,col(0.38));
+        ctx.fillStyle=tint;ctx.fillRect(0,0,S,S);
 
-        const mat=new THREE.ShaderMaterial({
-          uniforms:{map:{value:tex},time:{value:0},tint:{value:new THREE.Color(`hsl(${seedHue},80%,65%)`)}},
-          vertexShader:`varying vec2 vUv;varying float vZ;
-            void main(){vUv=uv;vZ=position.z;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-          fragmentShader:`uniform sampler2D map;uniform float time;uniform vec3 tint;
-            varying vec2 vUv;varying float vZ;
-            void main(){
-              vec4 texColor=texture2D(map,vUv);
-              float scan=0.85+0.15*sin(vUv.y*120.0+time*3.0);
-              vec3 holo=mix(texColor.rgb,texColor.rgb*tint*1.3,0.35);
-              float glow=smoothstep(-1.2,1.2,vZ)*0.25;
-              gl_FragColor=vec4(holo*scan+glow*tint,0.92);
-            }`,
-          transparent:true,side:THREE.DoubleSide,
+        // 扫描线
+        for(let y=0;y<S;y+=3){
+          const op=0.06+0.04*Math.sin(y*0.15+t*3);
+          ctx.fillStyle=`rgba(0,0,0,${op})`;
+          ctx.fillRect(0,y,S,1);
+        }
+
+        // 移动扫描光带
+        const scanY=((t*60)%( S+40))-20;
+        const scanG=ctx.createLinearGradient(0,scanY-8,0,scanY+8);
+        scanG.addColorStop(0,"transparent");
+        scanG.addColorStop(0.5,col(0.45));
+        scanG.addColorStop(1,"transparent");
+        ctx.fillStyle=scanG;ctx.fillRect(0,scanY-8,S,16);
+
+        // 边缘光晕（圆形裁剪效果）
+        ctx.save();
+        ctx.globalCompositeOperation="destination-in";
+        const mask=ctx.createRadialGradient(CX,CY,S*0.3,CX,CY,S*0.52);
+        mask.addColorStop(0,"rgba(0,0,0,1)");
+        mask.addColorStop(0.85,"rgba(0,0,0,1)");
+        mask.addColorStop(1,"rgba(0,0,0,0)");
+        ctx.fillStyle=mask;ctx.fillRect(0,0,S,S);
+        ctx.restore();
+
+        // 边缘发光环
+        ctx.save();
+        ctx.globalCompositeOperation="source-over";
+        const ring=ctx.createRadialGradient(CX,CY,S*0.42,CX,CY,S*0.52);
+        ring.addColorStop(0,col(0.0));
+        ring.addColorStop(0.5,col(0.6+0.2*Math.sin(t*2)));
+        ring.addColorStop(1,col(0.0));
+        ctx.fillStyle=ring;ctx.fillRect(0,0,S,S);
+        ctx.restore();
+
+        // 粒子环
+        parts.forEach(p=>{
+          p.a+=p.speed;
+          const px2=CX+Math.cos(p.a)*p.r*S;
+          const py2=CY+Math.sin(p.a)*p.r*S*0.35;
+          const op=0.4+0.5*Math.abs(Math.sin(t+p.phase));
+          ctx.beginPath();
+          ctx.arc(px2,py2,p.size,0,Math.PI*2);
+          ctx.fillStyle=col(op);
+          ctx.fill();
         });
 
-        const mesh=new THREE.Mesh(geo,mat);
-        scene.add(mesh);
+        // 底部悬浮底座光盘
+        ctx.save();
+        ctx.globalCompositeOperation="source-over";
+        const base=ctx.createEllipse?null:null; // canvas没有createEllipse，手动画
+        ctx.beginPath();
+        ctx.ellipse(CX,CY+S*0.42,S*0.28,S*0.045,0,0,Math.PI*2);
+        const baseG=ctx.createLinearGradient(CX-S*0.28,0,CX+S*0.28,0);
+        baseG.addColorStop(0,"transparent");
+        baseG.addColorStop(0.5,col(0.5+0.2*Math.sin(t*1.5)));
+        baseG.addColorStop(1,"transparent");
+        ctx.fillStyle=baseG;ctx.fill();
+        ctx.restore();
 
-        // 粒子光环（呼应现有的全息粒子美术风格）
-        const pCount=200;
-        const pPos=new Float32Array(pCount*3);
-        for(let i=0;i<pCount;i++){
-          const a=Math.random()*Math.PI*2,r=3+Math.random()*1.5;
-          pPos[i*3]=Math.cos(a)*r;pPos[i*3+1]=(Math.random()-0.5)*4;pPos[i*3+2]=Math.sin(a)*r;
-        }
-        const pGeo=new THREE.BufferGeometry();
-        pGeo.setAttribute("position",new THREE.BufferAttribute(pPos,3));
-        const particles=new THREE.Points(pGeo,new THREE.PointsMaterial({
-          color:new THREE.Color(`hsl(${seedHue},90%,75%)`),size:0.035,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending}));
-        scene.add(particles);
-        scene.add(new THREE.AmbientLight(0xffffff,0.9));
+        animRef.current=requestAnimationFrame(draw);
+      };
 
-        controls=new THREE.OrbitControls(camera,renderer.domElement);
-        controls.enableDamping=true;controls.dampingFactor=0.08;
-        controls.autoRotate=true;controls.autoRotateSpeed=1.8;
-        controls.enableZoom=false;controls.enablePan=false;
-
-        setSteps(s=>({...s,texture:true,light:true}));
-        if(cancelled){renderer.dispose();return;}
-        setStage("ready");
-
-        let t=0;
-        const animate=()=>{
-          t+=0.02;
-          mat.uniforms.time.value=t;
-          particles.rotation.y+=0.002;
-          controls.update();
-          renderer.render(scene,camera);
-          raf=requestAnimationFrame(animate);
-        };
-        animate();
-      }catch(err){
-        console.error("[PhotoHologram3D]",err);
-        if(!cancelled){setErrMsg(err.message||"全息生成失败");setStage("error");}
-      }
-    })();
+      setReady(true);
+      animRef.current=requestAnimationFrame(draw);
+    };
+    img.onerror=()=>{if(!cancelled)setErr("照片加载失败，请重试");};
+    img.src=photoSrc;
 
     return()=>{
       cancelled=true;
-      if(raf)cancelAnimationFrame(raf);
-      if(controls)controls.dispose&&controls.dispose();
-      if(renderer)renderer.dispose();
+      if(animRef.current)cancelAnimationFrame(animRef.current);
     };
   },[photoSrc,size,name]);
 
-  const stepList=[
-    {key:"face",zh:"人脸/图像识别"},
-    {key:"depth",zh:"AI深度估计"},
-    {key:"rebuild",zh:"3D点云重建"},
-    {key:"texture",zh:"纹理映射"},
-    {key:"light",zh:"光影增强"},
-  ];
-
   return(
     <div style={{position:"relative",width:size,height:size,margin:"0 auto"}}>
-      <div ref={mountRef} style={{width:size,height:size,borderRadius:12,overflow:"hidden"}}/>
-      {stage!=="ready"&&stage!=="error"&&(
-        <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,background:"rgba(5,3,25,0.78)",borderRadius:12}}>
-          {stepList.map(s=>(
-            <div key={s.key} style={{fontSize:11,color:steps[s.key]?"#86efac":"rgba(200,184,255,0.5)"}}>
-              {steps[s.key]?"✓":"…"} {s.zh}
-            </div>
-          ))}
+      <canvas ref={canvasRef} style={{width:size,height:size,borderRadius:10,display:"block"}}/>
+      {!ready&&!err&&(
+        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
+          background:"rgba(5,3,25,0.80)",borderRadius:10,fontSize:12,color:"rgba(200,184,255,0.6)"}}>
+          生成全息影像中…
         </div>
       )}
-      {stage==="error"&&(
-        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",padding:10,textAlign:"center",fontSize:11,color:"#fca5a5",background:"rgba(5,3,25,0.88)",borderRadius:12}}>
-          {errMsg}<br/>（首次加载AI模型需要较好的网络，且对设备性能有要求）
+      {err&&(
+        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
+          background:"rgba(5,3,25,0.88)",borderRadius:10,fontSize:11,color:"#fca5a5",padding:10,textAlign:"center"}}>
+          {err}
         </div>
       )}
     </div>
