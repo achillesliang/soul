@@ -22,6 +22,16 @@
   to   = "/.netlify/functions/ai-chat"
   status = 200
 
+[[redirects]]
+  from = "/api/planet"
+  to   = "/.netlify/functions/planet"
+  status = 200
+
+[[redirects]]
+  from = "/api/planet-leaderboard"
+  to   = "/.netlify/functions/planet-leaderboard"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

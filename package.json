@@ -1,0 +1,9 @@
+{
+  "name": "soul-haven",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Soul Haven (灵魂家园) - Pi Network blockchain soul memorial app",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}
