@@ -754,7 +754,7 @@ function usePiNetwork() {
     try {
       // Step 1 — await Pi.init() as a Promise so SDK is fully ready
       // Pi.init returns void in older SDK builds, so we normalise it.
-      const initResult = window.Pi.init({ version: "2.0", sandbox: false });
+      const initResult = window.Pi.init({ version: "2.0", sandbox: true });
       if (initResult && typeof initResult.then === "function") {
         await initResult;
       }
@@ -836,7 +836,7 @@ function usePiNetwork() {
     }
     // ── Ensure SDK initialised ────────────────────────────────
     if (!piInitialized.current) {
-      const initResult = window.Pi.init({ version: "2.0", sandbox: false });
+      const initResult = window.Pi.init({ version: "2.0", sandbox: true });
       if (initResult && typeof initResult.then === "function") await initResult;
       piInitialized.current = true;
     }
