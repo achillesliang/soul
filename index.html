@@ -762,7 +762,7 @@ function usePiNetwork() {
 
       // Step 2 — authenticate with "username" scope only
       const auth = await window.Pi.authenticate(
-        ["username"],
+        ["username", "payments"],
         (payment) => {
           // Required incomplete-payment callback — log and ignore for now
           console.warn("Incomplete payment found:", payment?.identifier);
@@ -2101,9 +2101,20 @@ function PhotoHologram3D({photoSrc,size=220,name}){
       sz:0.8+Math.random()*1.6,
     }));
 
-    imgEl=new Image();
-    // 不设 crossOrigin：data URL 不需要，设了反而会失败
-    imgEl.onload=()=>{
+    // data:URL直接用fetch转Blob再createImageBitmap，绕开canvas tainted限制
+    const loadImage=async(src)=>{
+      if(src.startsWith("data:")){
+        const res=await fetch(src);
+        const blob=await res.blob();
+        return await createImageBitmap(blob);
+      }
+      return new Promise((resolve,reject)=>{
+        const im=new Image();im.crossOrigin="anonymous";
+        im.onload=()=>resolve(im);im.onerror=reject;im.src=src;
+      });
+    };
+
+    loadImage(photoSrc).then(imgEl=>{
       if(cancelled)return;
       const canvas=canvasRef.current;
       if(!canvas)return;
@@ -2194,14 +2205,11 @@ function PhotoHologram3D({photoSrc,size=220,name}){
       if(wrapRef.current){
         wrapRef.current.style.animation="holoTilt 4s ease-in-out infinite";
       }
-    };
-    imgEl.onerror=()=>{if(!cancelled)setErr("照片加载失败");};
-    imgEl.src=photoSrc;
+    }).catch(()=>{if(!cancelled)setErr("照片加载失败，请重试");});
 
     return()=>{
       cancelled=true;
       if(animRef.current)cancelAnimationFrame(animRef.current);
-      if(imgEl)imgEl.src="";
       if(wrapRef.current)wrapRef.current.style.animation="";
     };
   },[photoSrc,size,name]);
