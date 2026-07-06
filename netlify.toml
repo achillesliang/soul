@@ -32,6 +32,11 @@
   to   = "/.netlify/functions/planet-leaderboard"
   status = 200
 
+[[redirects]]
+  from = "/api/memorial"
+  to   = "/.netlify/functions/memorial"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
