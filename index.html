@@ -2340,13 +2340,12 @@ Respond in first person, warm and brief (2-3 sentences max), like family talking
 }
 
 function MemorialPage({profile,piUser,payWithPi,lang}){
-  const [memorials,setMemorials]=useState([
-    {id:"m1",name:"外婆",relation:"祖母",birthYear:"1928",epitaph:"谢谢你做的每一碗汤圆，我永远记得你的笑容",created:"2024-01-15",paid:true},
-  ]);
+  const [memorials,setMemorials]=useState([]);
+  const [dbLoading,setDbLoading]=useState(false);
   const [creating,setCreating]=useState(false);
   const [form,setForm]=useState({name:"",relation:"",birthYear:"",epitaph:"",persona:"",consent:false,photoPreview:null});
   const [paying,setPaying]=useState(false);
-  const [selected,setSelected]=useState("m1");
+  const [selected,setSelected]=useState(null);
   const [talkMsg,setTalkMsg]=useState("");
   const [chatHistory,setChatHistory]=useState({}); // {[memorialId]: [{role,content}]}
   const [talking,setTalking]=useState(false);
@@ -2359,16 +2358,50 @@ function MemorialPage({profile,piUser,payWithPi,lang}){
     ?["父亲","母亲","祖父","祖母","伴侣","挚友","初恋","兄弟","姐妹","其他"]
     :["Father","Mother","Grandfather","Grandmother","Partner","Best Friend","First Love","Brother","Sister","Other"];
 
+  // 从数据库加载该用户的纪念列表
+  useEffect(()=>{
+    if(!piUser)return;
+    setDbLoading(true);
+    fetch(`/api/memorial?ownerId=${encodeURIComponent(piUser.uid)}`)
+      .then(r=>r.json())
+      .then(d=>{
+        if(d.memorials){
+          setMemorials(d.memorials);
+          if(d.memorials.length>0&&!selected)setSelected(d.memorials[0].id);
+        }
+      })
+      .catch(e=>console.error("[memorial load]",e))
+      .finally(()=>setDbLoading(false));
+  },[piUser]);
+
+  // 选中某条纪念时，如果还没有完整数据（含照片），按需拉取
+  useEffect(()=>{
+    if(!selected||!piUser)return;
+    const m=memorials.find(x=>x.id===selected);
+    if(!m||m.photo!==undefined)return; // 已有完整数据
+    fetch(`/api/memorial?ownerId=${encodeURIComponent(piUser.uid)}&id=${encodeURIComponent(selected)}`)
+      .then(r=>r.json())
+      .then(d=>{if(d.id)setMemorials(ms=>ms.map(x=>x.id===d.id?d:x));})
+      .catch(e=>console.error("[memorial fetch]",e));
+  },[selected]);
+
   const create=async()=>{
     if(!form.name||!form.relation||!form.birthYear||!form.consent)return;
     setPaying(true);
     const r=await payWithPi(1,"数字亡魂");
     if(r.success){
-      const newM={id:"m"+Date.now(),name:form.name,relation:form.relation,
+      const newM={id:"m"+Date.now(),ownerId:piUser?.uid||"demo",name:form.name,relation:form.relation,
         birthYear:form.birthYear,epitaph:form.epitaph,persona:form.persona||"",photo:form.photoPreview||null,
         created:new Date().toISOString().slice(0,10),paid:true};
+      // 先更新本地state，立刻显示
       setMemorials(m=>[...m,newM]);setSelected(newM.id);
       setForm({name:"",relation:"",birthYear:"",epitaph:"",persona:"",consent:false,photoPreview:null});setCreating(false);
+      // 异步保存到数据库
+      fetch("/api/memorial",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"save",memorial:newM})})
+        .then(r=>r.json())
+        .then(d=>{ if(!d.ok) console.error("[memorial save]",d); })
+        .catch(e=>console.error("[memorial save]",e));
     }
     setPaying(false);
   };
@@ -2438,7 +2471,9 @@ function MemorialPage({profile,piUser,payWithPi,lang}){
           <h2 style={{fontFamily:"'Ma Shan Zheng',serif",fontSize:26,color:"#e8e0ff",margin:"0 0 4px"}}>{tl("memorialTitle",lang)}</h2>
           <p style={{fontSize:13,color:"rgba(180,160,255,0.5)",margin:0,maxWidth:480,lineHeight:1.7}}>{tl("memorialSub",lang)}</p>
         </div>
-        <button style={S.btn} onClick={()=>setCreating(true)}>{tl("memorialNew",lang)}</button>
+        {!piUser&&<div style={{...S.card,padding:"14px 18px",marginBottom:16,fontSize:13,color:"rgba(180,160,255,0.6)",textAlign:"center"}}>{lang==="zh"?"请先连接 Pi 账号，才能查看和创建你的纪念":"Connect Pi account to view and create memorials"}</div>}
+        {dbLoading&&<div style={{textAlign:"center",padding:20,fontSize:13,color:"rgba(180,160,255,0.5)"}}>{lang==="zh"?"加载纪念数据中…":"Loading memorials…"}</div>}
+        <button style={{...S.btn,opacity:piUser?1:0.4}} disabled={!piUser} onClick={()=>setCreating(true)}>{tl("memorialNew",lang)}</button>
       </div>
 
       {/* 隐私说明 */}
